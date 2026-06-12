@@ -1,0 +1,86 @@
+[
+  {
+    "id": "belut",
+    "nome": "Belut",
+    "immagine": "belut.jpeg",
+    "titolo": "Master in sensoristica olfattiva avanzata"
+  },
+  {
+    "id": "clari",
+    "nome": "Clari",
+    "immagine": "clari.jpeg",
+    "titolo": "Master in sfondamento di cancelli"
+  },
+  {
+    "id": "conti",
+    "nome": "Conti",
+    "immagine": "conti.jpeg",
+    "titolo": "Master in collezionismo di cagate alternative in autostrada"
+  },
+  {
+    "id": "fede",
+    "nome": "Fede",
+    "immagine": "fede.jpeg",
+    "titolo": "Master in gestione dell'ansia a carnevale"
+  },
+  {
+    "id": "fra-nicoli",
+    "nome": "Fra Nicoli",
+    "immagine": "fra nicoli.jpeg",
+    "titolo": "Master in gossip finding and reveal"
+  },
+  {
+    "id": "fra",
+    "nome": "Fra",
+    "immagine": "fra.jpeg",
+    "titolo": "Master in cosa nostra e gestione dei pizzi del vicinato"
+  },
+  {
+    "id": "gabri",
+    "nome": "Gabri",
+    "immagine": "gabri.jpeg",
+    "titolo": "Master in invenzione di scuse per non uscire di casa"
+  },
+  {
+    "id": "ghila",
+    "nome": "Ghila",
+    "immagine": "ghila.jpeg",
+    "titolo": "Master in drunkness management"
+  },
+  {
+    "id": "greta",
+    "nome": "Greta",
+    "immagine": "greta.jpeg",
+    "titolo": "Master nel trovarsi l'unica donna in mezzo a 3 cugini idioti"
+  },
+  {
+    "id": "loris",
+    "nome": "Loris",
+    "immagine": "loris.jpeg",
+    "titolo": "Master nell'uscire di casa a orari improponibili"
+  },
+  {
+    "id": "mickybi",
+    "nome": "Mickybi",
+    "immagine": "mickybi.jpeg",
+    "titolo": "Master in collezionismo di sboccate alternative"
+  },
+  {
+    "id": "vale",
+    "nome": "Vale",
+    "immagine": "vale.jpeg",
+    "titolo": "Master in Pijama-driven outfit"
+  },
+  {
+    "id": "vegio-michi",
+    "nome": "Vegio Michi",
+    "immagine": "vegio michi.jpeg",
+    "titolo": "Master in joint rolling and quality check"
+  },
+  {
+    "id": "vegio",
+    "nome": "Vegio",
+    "immagine": "vegio.jpeg",
+    "titolo": "Master nel mostrare il proprio deretano al pubblico"
+  }
+]

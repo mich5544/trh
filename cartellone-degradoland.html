@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cartellone Degradoland</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #120717;
+        --ink: #fff8ea;
+        --muted: rgba(255, 248, 234, 0.72);
+        --gold: #ffc857;
+        --pink: #ff3864;
+        --cyan: #3ee8ff;
+        --green: #85ff9e;
+        --violet: #9b5de5;
+        --line: rgba(255, 255, 255, 0.16);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 8% 8%, rgba(255, 56, 100, 0.78), transparent 24%),
+          radial-gradient(circle at 70% 4%, rgba(62, 232, 255, 0.58), transparent 25%),
+          radial-gradient(circle at 92% 92%, rgba(133, 255, 158, 0.42), transparent 28%),
+          linear-gradient(135deg, #2a0a24 0%, #263174 45%, #073949 72%, #102f25 100%);
+        color: var(--ink);
+      }
+
+      .poster {
+        width: min(1400px, calc(100vw - 28px));
+        min-height: calc(100vh - 28px);
+        margin: 14px auto;
+        overflow: hidden;
+        position: relative;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background:
+          linear-gradient(112deg, transparent 0 15%, rgba(255, 200, 87, 0.14) 15% 25%, transparent 25% 42%, rgba(62, 232, 255, 0.18) 42% 54%, transparent 54% 72%, rgba(133, 255, 158, 0.12) 72% 82%, transparent 82%),
+          repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 86px),
+          rgba(6, 7, 14, 0.38);
+        box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45);
+      }
+
+      .poster::before {
+        content: "DC";
+        position: absolute;
+        right: -44px;
+        top: -20px;
+        color: rgba(255, 255, 255, 0.055);
+        font-size: clamp(10rem, 22vw, 24rem);
+        font-weight: 1000;
+        line-height: 0.75;
+      }
+
+      .stage {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        gap: 18px;
+        padding: clamp(18px, 3vw, 36px);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) 430px;
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .headline,
+      .slot-ad,
+      .wanted,
+      .coupon,
+      .rules {
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(15, 13, 28, 0.74);
+        backdrop-filter: blur(14px);
+      }
+
+      .headline {
+        padding: clamp(22px, 4vw, 44px);
+        background:
+          radial-gradient(circle at 12% 10%, rgba(255, 200, 87, 0.22), transparent 30%),
+          radial-gradient(circle at 76% 18%, rgba(255, 79, 216, 0.24), transparent 28%),
+          rgba(15, 13, 28, 0.74);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--gold);
+        font-size: 0.78rem;
+        font-weight: 1000;
+        letter-spacing: 0.17em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 14px;
+        max-width: 980px;
+        background: linear-gradient(90deg, #fff8e8 0%, #ffd166 18%, #ff4fd8 42%, #3ee8ff 70%, #85ff9e 100%);
+        background-clip: text;
+        color: transparent;
+        font-size: clamp(4.3rem, 9vw, 8.7rem);
+        font-weight: 1000;
+        letter-spacing: 0;
+        line-height: 0.82;
+        text-transform: uppercase;
+      }
+
+      .tagline {
+        max-width: 870px;
+        margin-bottom: 24px;
+        color: var(--muted);
+        font-size: clamp(1.1rem, 2vw, 1.45rem);
+        line-height: 1.35;
+      }
+
+      .badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .badges span,
+      .ticker span {
+        display: inline-flex;
+        align-items: center;
+        min-height: 38px;
+        padding: 0 13px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        font-size: 0.82rem;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .badges span:nth-child(1) {
+        background: rgba(255, 200, 87, 0.2);
+        color: var(--gold);
+      }
+
+      .badges span:nth-child(2) {
+        background: rgba(62, 232, 255, 0.18);
+        color: var(--cyan);
+      }
+
+      .badges span:nth-child(3) {
+        background: rgba(133, 255, 158, 0.16);
+        color: var(--green);
+      }
+
+      .slot-ad {
+        padding: 18px;
+        background:
+          radial-gradient(circle at 50% 0%, rgba(255, 200, 87, 0.28), transparent 34%),
+          rgba(9, 11, 22, 0.82);
+      }
+
+      .slot-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .slot-title strong {
+        color: var(--green);
+        font-size: 1.35rem;
+      }
+
+      .reels {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 9px;
+      }
+
+      .reel {
+        position: relative;
+        min-height: 250px;
+        overflow: hidden;
+        border: 2px solid rgba(255, 255, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: inset 0 0 28px rgba(62, 232, 255, 0.11);
+      }
+
+      .reel img,
+      .face img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .reel::after,
+      .face::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, transparent 36%, rgba(0, 0, 0, 0.86));
+      }
+
+      .reel strong {
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        z-index: 1;
+        font-size: 1.05rem;
+      }
+
+      .slot-copy {
+        margin: 14px 0 0;
+        color: var(--muted);
+        line-height: 1.35;
+      }
+
+      .ticker {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 18px;
+      }
+
+      .wanted {
+        padding: 18px;
+      }
+
+      .face-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 9px;
+      }
+
+      .face {
+        position: relative;
+        min-height: 150px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 8px;
+        background: #151321;
+      }
+
+      .face strong {
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        z-index: 1;
+        font-size: 0.95rem;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.72);
+      }
+
+      .side-stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .rules,
+      .coupon {
+        padding: 20px;
+      }
+
+      .rules h2,
+      .coupon h2 {
+        margin-bottom: 12px;
+        font-size: clamp(1.8rem, 3.2vw, 3.2rem);
+        line-height: 0.94;
+      }
+
+      .rules ol {
+        display: grid;
+        gap: 10px;
+        margin: 0;
+        padding-left: 22px;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.35;
+      }
+
+      .rules strong {
+        color: #ffffff;
+      }
+
+      .coupon {
+        position: relative;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 100% 0%, rgba(133, 255, 158, 0.22), transparent 28%),
+          radial-gradient(circle at 0% 100%, rgba(255, 56, 100, 0.24), transparent 34%),
+          rgba(15, 13, 28, 0.82);
+      }
+
+      .coupon::after {
+        content: "";
+        position: absolute;
+        right: 20px;
+        bottom: 20px;
+        width: 92px;
+        height: 92px;
+        border-radius: 8px;
+        background:
+          linear-gradient(90deg, #fff 10px, transparent 10px 18px, #fff 18px 28px, transparent 28px 38px, #fff 38px),
+          linear-gradient(#08090d 0 0);
+        background-blend-mode: difference;
+        opacity: 0.88;
+      }
+
+      .coupon p {
+        max-width: 70%;
+        margin-bottom: 0;
+        color: var(--muted);
+        line-height: 1.4;
+      }
+
+      .footer {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 14px;
+        align-items: center;
+        padding: 16px 20px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background:
+          linear-gradient(90deg, rgba(255, 56, 100, 0.24), rgba(255, 200, 87, 0.12), rgba(62, 232, 255, 0.18)),
+          rgba(255, 255, 255, 0.06);
+      }
+
+      .footer strong {
+        font-size: clamp(1.2rem, 2.4vw, 2rem);
+        text-transform: uppercase;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        min-height: 54px;
+        padding: 0 18px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--gold), #ff6b35);
+        color: #08090d;
+        font-weight: 1000;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      @media print {
+        @page {
+          size: A4 landscape;
+          margin: 0;
+        }
+
+        body {
+          print-color-adjust: exact;
+          -webkit-print-color-adjust: exact;
+          background: #120717;
+        }
+
+        .poster {
+          width: 297mm;
+          min-height: 210mm;
+          margin: 0;
+          border-radius: 0;
+          border: 0;
+          box-shadow: none;
+        }
+
+        .stage {
+          padding: 8mm;
+          gap: 4mm;
+        }
+
+        .hero,
+        .main-grid {
+          gap: 4mm;
+        }
+
+        .face {
+          min-height: 26mm;
+        }
+
+        .reel {
+          min-height: 47mm;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .hero,
+        .main-grid,
+        .footer {
+          grid-template-columns: 1fr;
+        }
+
+        .face-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .coupon p {
+          max-width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="poster">
+      <div class="stage">
+        <section class="hero">
+          <div class="headline">
+            <p class="eyebrow">Sala giochi privata per gente selezionata male</p>
+            <h1>Degradoland</h1>
+            <p class="tagline">
+              14 personaggi. Zero doppioni. Soldi finti. Slot rumorosa. Prestigio sociale non rimborsabile.
+            </p>
+            <div class="badges">
+              <span>10.000 DC gratis</span>
+              <span>Lobby a esaurimento scorte</span>
+              <span>Audio saltimbanco incluso</span>
+              <span>Dignita non garantita</span>
+            </div>
+          </div>
+
+          <aside class="slot-ad">
+            <div class="slot-title">
+              <p class="eyebrow">Gioco aperto</p>
+              <strong>JACKPOT FINTO</strong>
+            </div>
+            <div class="reels">
+              <div class="reel">
+                <img src="public/personaggi/belut.jpeg" alt="Belut" />
+                <strong>Belut</strong>
+              </div>
+              <div class="reel">
+                <img src="public/personaggi/greta.jpeg" alt="Greta" />
+                <strong>Greta</strong>
+              </div>
+              <div class="reel">
+                <img src="public/personaggi/loris.jpeg" alt="Loris" />
+                <strong>Loris</strong>
+              </div>
+            </div>
+            <p class="slot-copy">La Slot del disastro: perdi con stile, vinci con coriandoli, sospetti del banco senza prove.</p>
+          </aside>
+        </section>
+
+        <div class="ticker">
+          <span>Nuovo: scegli solo il personaggio</span>
+          <span>Suoni arcade</span>
+          <span>Coriandoli sulle vincite</span>
+          <span>Reset morale incluso</span>
+          <span>Multiplayer in arrivo quando ci comportiamo bene</span>
+        </div>
+
+        <section class="main-grid">
+          <div class="wanted">
+            <p class="eyebrow">Roster ufficiale</p>
+            <div class="face-grid">
+              <div class="face"><img src="public/personaggi/belut.jpeg" alt="Belut" /><strong>Belut</strong></div>
+              <div class="face"><img src="public/personaggi/clari.jpeg" alt="Clari" /><strong>Clari</strong></div>
+              <div class="face"><img src="public/personaggi/conti.jpeg" alt="Conti" /><strong>Conti</strong></div>
+              <div class="face"><img src="public/personaggi/fede.jpeg" alt="Fede" /><strong>Fede</strong></div>
+              <div class="face"><img src="public/personaggi/fra%20nicoli.jpeg" alt="Fra Nicoli" /><strong>Fra Nicoli</strong></div>
+              <div class="face"><img src="public/personaggi/fra.jpeg" alt="Fra" /><strong>Fra</strong></div>
+              <div class="face"><img src="public/personaggi/gabri.jpeg" alt="Gabri" /><strong>Gabri</strong></div>
+              <div class="face"><img src="public/personaggi/ghila.jpeg" alt="Ghila" /><strong>Ghila</strong></div>
+              <div class="face"><img src="public/personaggi/greta.jpeg" alt="Greta" /><strong>Greta</strong></div>
+              <div class="face"><img src="public/personaggi/loris.jpeg" alt="Loris" /><strong>Loris</strong></div>
+              <div class="face"><img src="public/personaggi/mickybi.jpeg" alt="Mickybi" /><strong>Mickybi</strong></div>
+              <div class="face"><img src="public/personaggi/vale.jpeg" alt="Vale" /><strong>Vale</strong></div>
+              <div class="face"><img src="public/personaggi/vegio%20michi.jpeg" alt="Vegio Michi" /><strong>Vegio Michi</strong></div>
+              <div class="face"><img src="public/personaggi/vegio.jpeg" alt="Vegio" /><strong>Vegio</strong></div>
+            </div>
+          </div>
+
+          <aside class="side-stack">
+            <div class="rules">
+              <p class="eyebrow">Regolamento scientifico</p>
+              <h2>Come perdere amici in 3 spin</h2>
+              <ol>
+                <li><strong>Scegli una faccia.</strong> Da quel momento e responsabilita tua.</li>
+                <li><strong>Entra con 10.000 DC.</strong> Sono finti, quindi fanno ancora piu male.</li>
+                <li><strong>Gira la slot.</strong> Se vinci urlano i coriandoli. Se perdi, era beta.</li>
+                <li><strong>Massimo 14 posti.</strong> Quando finiscono le facce, finisce il mercato.</li>
+              </ol>
+            </div>
+
+            <div class="coupon">
+              <p class="eyebrow">Invito non ufficiale</p>
+              <h2>Presentati con una scusa pessima.</h2>
+              <p>
+                Valido per una serata di monete finte, discussioni inutili e jackpot che cambiano il destino per circa 12 secondi.
+              </p>
+            </div>
+          </aside>
+        </section>
+
+        <footer class="footer">
+          <strong>Degradoland: la sala giochi dove il budget e finto ma la vergogna e reale.</strong>
+          <span class="cta">Scegli la tua faccia</span>
+        </footer>
+      </div>
+    </main>
+  </body>
+</html>
