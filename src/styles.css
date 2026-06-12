@@ -1321,6 +1321,294 @@ h2 {
   text-align: right;
 }
 
+.boxing-page {
+  display: grid;
+  gap: 18px;
+}
+
+.boxing-hero,
+.boxing-layout,
+.boxing-stage,
+.boxing-ring-list,
+.boxing-ring,
+.boxer-sticker {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+
+.boxing-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 280px;
+  padding: clamp(20px, 4vw, 44px);
+  background:
+    radial-gradient(circle at 16% 20%, rgba(255, 56, 100, 0.32), transparent 30%),
+    radial-gradient(circle at 68% 18%, rgba(255, 200, 87, 0.34), transparent 30%),
+    radial-gradient(circle at 92% 74%, rgba(62, 232, 255, 0.24), transparent 34%),
+    rgba(55, 22, 34, 0.74);
+}
+
+.boxing-hero p:not(.eyebrow) {
+  max-width: 780px;
+  margin-bottom: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 1.08rem;
+  line-height: 1.5;
+}
+
+.boxing-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 56, 100, 0.14), rgba(255, 200, 87, 0.1), rgba(62, 232, 255, 0.12)),
+    rgba(8, 9, 15, 0.36);
+}
+
+.boxing-ring-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.ring-select {
+  display: grid;
+  gap: 6px;
+  min-height: 74px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
+  text-align: left;
+}
+
+.ring-select.active {
+  border-color: rgba(255, 200, 87, 0.72);
+  background: rgba(255, 200, 87, 0.14);
+}
+
+.ring-select span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.boxing-stage {
+  display: grid;
+  gap: 14px;
+  padding: clamp(14px, 2vw, 22px);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255, 200, 87, 0.12), transparent 34%),
+    linear-gradient(145deg, rgba(30, 20, 42, 0.86), rgba(12, 18, 31, 0.9));
+}
+
+.boxing-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.boxing-topline strong {
+  color: var(--gold);
+  text-align: right;
+}
+
+.boxing-ring {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 540px;
+  padding: clamp(18px, 3vw, 34px);
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(255, 56, 100, 0.12), transparent 28% 72%, rgba(62, 232, 255, 0.12)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0 2px, transparent 2px 42px),
+    rgba(37, 26, 30, 0.88);
+}
+
+.boxing-ring::before {
+  content: "";
+  position: absolute;
+  inset: 24px;
+  border: 6px solid rgba(255, 248, 234, 0.16);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.rope {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--hot), var(--gold), var(--cyan));
+  box-shadow: 0 0 18px rgba(255, 200, 87, 0.28);
+}
+
+.rope-top {
+  top: 72px;
+}
+
+.rope-bottom {
+  bottom: 72px;
+}
+
+.boxing-side {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 18px;
+  align-content: center;
+}
+
+.right-side {
+  justify-items: end;
+}
+
+.boxing-versus {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #08090d;
+  font-size: 1.55rem;
+  font-weight: 1000;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.36);
+}
+
+.boxer-sticker {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  width: min(260px, 100%);
+  padding: 12px;
+  border: 4px solid rgba(255, 255, 255, 0.78);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 200, 87, 0.1)),
+    rgba(8, 9, 15, 0.74);
+  transform: rotate(-2deg);
+  transition:
+    transform 180ms ease,
+    filter 180ms ease;
+}
+
+.right-side .boxer-sticker {
+  transform: rotate(2deg);
+}
+
+.boxer-sticker.active {
+  border-color: var(--gold);
+}
+
+.boxer-sticker.attacking {
+  animation: boxerAttack 460ms ease both;
+}
+
+.right-side .boxer-sticker.attacking {
+  animation-name: boxerAttackReverse;
+}
+
+.boxer-sticker.hit {
+  animation: boxerHit 420ms ease both;
+}
+
+.boxer-sticker.status-ko {
+  filter: grayscale(0.8);
+  opacity: 0.68;
+  transform: rotate(8deg) translateY(12px);
+}
+
+.boxer-sticker img {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  object-fit: cover;
+  filter: saturate(1.08) contrast(1.05);
+}
+
+.boxer-sticker strong {
+  margin-top: 10px;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.boxer-sticker small {
+  color: var(--muted);
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
+.boxer-hp {
+  width: 100%;
+  height: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.boxer-hp span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--hot), var(--gold), var(--green));
+  transition: width 260ms ease;
+}
+
+.boxing-event {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 54px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.boxing-event span {
+  color: var(--muted);
+}
+
+.boxing-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr repeat(3, minmax(0, 0.85fr));
+  gap: 10px;
+}
+
+.boxing-controls select,
+.boxing-controls button {
+  min-height: 54px;
+}
+
+.boxing-controls select {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
 .dice-tray {
   display: flex;
   align-items: center;
@@ -1977,6 +2265,44 @@ h2 {
   }
 }
 
+@keyframes boxerAttack {
+  0%,
+  100% {
+    transform: rotate(-2deg) translateX(0);
+  }
+
+  45% {
+    transform: rotate(-2deg) translateX(34px) scale(1.04);
+  }
+}
+
+@keyframes boxerAttackReverse {
+  0%,
+  100% {
+    transform: rotate(2deg) translateX(0);
+  }
+
+  45% {
+    transform: rotate(2deg) translateX(-34px) scale(1.04);
+  }
+}
+
+@keyframes boxerHit {
+  0%,
+  100% {
+    transform: translateX(0) rotate(-2deg);
+  }
+
+  25% {
+    transform: translateX(-10px) rotate(-5deg);
+    filter: saturate(1.8);
+  }
+
+  55% {
+    transform: translateX(8px) rotate(3deg);
+  }
+}
+
 @keyframes reelRoll {
   0% {
     transform: translateY(-100%);
@@ -2346,6 +2672,55 @@ h2 {
 
   .board-layout {
     padding: 10px;
+  }
+
+  .boxing-layout {
+    grid-template-columns: 1fr;
+    padding: 10px;
+  }
+
+  .boxing-ring-list {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(150px, 1fr);
+    overflow-x: auto;
+  }
+
+  .boxing-hero {
+    align-items: stretch;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .boxing-ring {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .boxing-side,
+  .right-side {
+    justify-items: center;
+  }
+
+  .boxing-versus {
+    width: 58px;
+    height: 58px;
+    margin: 0 auto;
+    font-size: 1.2rem;
+  }
+
+  .boxer-sticker {
+    width: min(220px, 92%);
+  }
+
+  .boxing-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .boxing-controls .spin-button,
+  .boxing-controls .secondary-button:last-child {
+    grid-column: 1 / -1;
   }
 
   .blackjack-table {

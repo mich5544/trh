@@ -63,6 +63,20 @@ const boardSpaces = [
   { id: "fine", name: "Cena da pagare", type: "tax", amount: 130 },
   { id: "arena", name: "Arena del caos", type: "property", price: 300, rent: 70, color: "#ff4fd8" },
 ];
+const boxingRings = Array.from({ length: 3 }, (_, index) => ({
+  id: `ring-${index + 1}`,
+  name: `Ring ${index + 1}`,
+  phase: "waiting",
+  round: 0,
+  fighters: [],
+  queue: [],
+  lastEvent: null,
+  message: "Ring libero. Entra e aspetta qualcuno da menare.",
+}));
+const boxingCooldowns = {
+  punch: 900,
+  kick: 1600,
+};
 
 app.use(express.static(path.join(__dirname, "dist")));
 
@@ -103,6 +117,7 @@ wss.on("connection", (socket) => {
       broadcastState();
       sendBlackjackState(socket);
       send(socket, buildBoardState());
+      send(socket, buildBoxingState());
       return;
     }
 
@@ -186,6 +201,26 @@ wss.on("connection", (socket) => {
       return;
     }
 
+    if (message.type === "boxing-join") {
+      joinBoxingRing(clientId, message.ringId);
+      return;
+    }
+
+    if (message.type === "boxing-leave") {
+      leaveBoxing(clientId);
+      return;
+    }
+
+    if (message.type === "boxing-attack") {
+      attackBoxing(clientId, message.attack, message.targetId);
+      return;
+    }
+
+    if (message.type === "boxing-new-round") {
+      startBoxingRound(message.ringId);
+      return;
+    }
+
     if (message.type === "ping") {
       clients.get(clientId).lastSeenAt = Date.now();
       send(socket, { type: "pong" });
@@ -247,10 +282,12 @@ function releaseCharacter(clientId) {
   player.displayName = null;
   blackjackTable.players.delete(clientId);
   boardGame.players.delete(clientId);
+  removeBoxer(clientId);
   player.lastSeenAt = Date.now();
   broadcastState();
   broadcastBlackjackState();
   broadcastBoardState();
+  broadcastBoxingState();
 }
 
 function sendChatMessage(clientId, rawText) {
@@ -288,9 +325,11 @@ function pruneDisconnectedPlayer(clientId) {
     clients.delete(clientId);
     blackjackTable.players.delete(clientId);
     boardGame.players.delete(clientId);
+    removeBoxer(clientId);
     broadcastState();
     broadcastBlackjackState();
     broadcastBoardState();
+    broadcastBoxingState();
   }
 }
 
@@ -801,6 +840,208 @@ function buildBoardState() {
 
 function rollDie() {
   return Math.floor(Math.random() * 6) + 1;
+}
+
+function joinBoxingRing(clientId, rawRingId) {
+  const player = clients.get(clientId);
+  const ring = boxingRings.find((item) => item.id === rawRingId) ?? boxingRings[0];
+
+  if (!player?.characterId) {
+    send(player?.socket, { type: "error", message: "Prima scegli un personaggio, poi entra nell'arena." });
+    return;
+  }
+
+  removeBoxer(clientId);
+
+  const boxer = {
+    id: clientId,
+    displayName: player.displayName || player.characterId,
+    characterId: player.characterId,
+    side: null,
+    hp: 100,
+    maxHp: 100,
+    status: "queued",
+    lastAttackAt: 0,
+  };
+
+  ring.queue.push(boxer);
+  ring.message = `${boxer.displayName} entra nel ${ring.name}.`;
+  seedBoxingRing(ring);
+  broadcastBoxingState();
+}
+
+function leaveBoxing(clientId) {
+  removeBoxer(clientId);
+  broadcastBoxingState();
+}
+
+function removeBoxer(clientId) {
+  for (const ring of boxingRings) {
+    ring.fighters = ring.fighters.filter((fighter) => fighter.id !== clientId);
+    ring.queue = ring.queue.filter((fighter) => fighter.id !== clientId);
+    if (ring.fighters.length === 0 && ring.queue.length === 0) {
+      resetBoxingRing(ring, "Ring libero. Entra e aspetta qualcuno da menare.");
+    } else {
+      seedBoxingRing(ring);
+    }
+  }
+}
+
+function seedBoxingRing(ring) {
+  const activeLeft = ring.fighters.filter((fighter) => fighter.side === "left" && fighter.status !== "ko").length;
+  const activeRight = ring.fighters.filter((fighter) => fighter.side === "right" && fighter.status !== "ko").length;
+  const ringIsFull = activeLeft >= 2 && activeRight >= 2;
+
+  while (!ringIsFull && ring.queue.length > 0 && ring.fighters.length < 4) {
+    const boxer = ring.queue.shift();
+    const leftCount = ring.fighters.filter((fighter) => fighter.side === "left").length;
+    const rightCount = ring.fighters.filter((fighter) => fighter.side === "right").length;
+    boxer.side = leftCount <= rightCount ? "left" : "right";
+    boxer.status = "ready";
+    boxer.hp = boxer.maxHp;
+    boxer.lastAttackAt = 0;
+    ring.fighters.push(boxer);
+  }
+
+  const left = ring.fighters.filter((fighter) => fighter.side === "left");
+  const right = ring.fighters.filter((fighter) => fighter.side === "right");
+
+  if (left.length > 0 && left.length === right.length && ring.phase !== "fighting") {
+    startBoxingRound(ring.id);
+    return;
+  }
+
+  if (ring.phase === "waiting") {
+    ring.message =
+      ring.fighters.length === 0
+        ? "Ring libero. Entra e aspetta qualcuno da menare."
+        : "In attesa di un avversario per pareggiare il ring.";
+  }
+}
+
+function startBoxingRound(rawRingId) {
+  const ring = boxingRings.find((item) => item.id === rawRingId);
+  if (!ring) {
+    return;
+  }
+
+  const left = ring.fighters.filter((fighter) => fighter.side === "left");
+  const right = ring.fighters.filter((fighter) => fighter.side === "right");
+  if (left.length === 0 || left.length !== right.length) {
+    ring.phase = "waiting";
+    ring.message = "Servono avversari pari per iniziare.";
+    broadcastBoxingState();
+    return;
+  }
+
+  ring.phase = "fighting";
+  ring.round += 1;
+  ring.lastEvent = null;
+  for (const fighter of ring.fighters) {
+    fighter.hp = fighter.maxHp;
+    fighter.status = "fighting";
+    fighter.lastAttackAt = 0;
+  }
+  ring.message = `${left.length} vs ${right.length}. Round ${ring.round}: botte autorizzate.`;
+  broadcastBoxingState();
+}
+
+function attackBoxing(clientId, rawAttack, rawTargetId) {
+  const ring = boxingRings.find((item) => item.fighters.some((fighter) => fighter.id === clientId));
+  if (!ring || ring.phase !== "fighting") {
+    return;
+  }
+
+  const attacker = ring.fighters.find((fighter) => fighter.id === clientId);
+  if (!attacker || attacker.status !== "fighting") {
+    return;
+  }
+
+  const attack = rawAttack === "kick" ? "kick" : "punch";
+  const now = Date.now();
+  if (now - attacker.lastAttackAt < boxingCooldowns[attack]) {
+    return;
+  }
+
+  const opponents = ring.fighters.filter((fighter) => fighter.side !== attacker.side && fighter.status === "fighting");
+  const target = opponents.find((fighter) => fighter.id === rawTargetId) ?? opponents[0];
+  if (!target) {
+    return;
+  }
+
+  const baseDamage = attack === "kick" ? 18 : 10;
+  const variance = attack === "kick" ? Math.floor(Math.random() * 7) : Math.floor(Math.random() * 5);
+  const damage = baseDamage + variance;
+  attacker.lastAttackAt = now;
+  target.hp = Math.max(0, target.hp - damage);
+  if (target.hp <= 0) {
+    target.status = "ko";
+  }
+
+  ring.lastEvent = {
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    attackerId: attacker.id,
+    targetId: target.id,
+    attack,
+    damage,
+    createdAt: new Date().toISOString(),
+  };
+  ring.message = `${attacker.displayName} ${attack === "kick" ? "tira un calcio" : "piazza un pugno"} a ${target.displayName}: -${damage} HP.`;
+  maybeFinishBoxingRound(ring);
+  broadcastBoxingState();
+}
+
+function maybeFinishBoxingRound(ring) {
+  const leftAlive = ring.fighters.some((fighter) => fighter.side === "left" && fighter.status === "fighting");
+  const rightAlive = ring.fighters.some((fighter) => fighter.side === "right" && fighter.status === "fighting");
+
+  if (leftAlive && rightAlive) {
+    return;
+  }
+
+  ring.phase = "finished";
+  const winners = ring.fighters.filter((fighter) => fighter.status === "fighting");
+  ring.message = winners.length > 0 ? `${winners.map((fighter) => fighter.displayName).join(" + ")} vincono il round.` : "Doppio KO. Vergogna condivisa.";
+  for (const fighter of ring.fighters) {
+    if (fighter.status !== "ko") {
+      fighter.status = "winner";
+    }
+  }
+}
+
+function resetBoxingRing(ring, message) {
+  ring.phase = "waiting";
+  ring.round = 0;
+  ring.fighters = [];
+  ring.queue = [];
+  ring.lastEvent = null;
+  ring.message = message;
+}
+
+function broadcastBoxingState() {
+  broadcast(buildBoxingState());
+}
+
+function buildBoxingState() {
+  return {
+    type: "boxing-state",
+    rings: boxingRings.map((ring) => ({
+      id: ring.id,
+      name: ring.name,
+      phase: ring.phase,
+      round: ring.round,
+      message: ring.message,
+      lastEvent: ring.lastEvent,
+      fighters: ring.fighters.map((fighter) => ({
+        ...fighter,
+        online: Boolean(clients.get(fighter.id)?.socket),
+      })),
+      queue: ring.queue.map((fighter) => ({
+        ...fighter,
+        online: Boolean(clients.get(fighter.id)?.socket),
+      })),
+    })),
+  };
 }
 
 function send(socket, payload) {

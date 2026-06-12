@@ -45,6 +45,7 @@ function App() {
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [blackjackTable, setBlackjackTable] = useState(createEmptyBlackjackTable());
   const [boardState, setBoardState] = useState(createEmptyBoardState());
+  const [boxingRings, setBoxingRings] = useState([]);
   const gridRef = useRef(null);
   const socketRef = useRef(null);
   const selectedCharacterIdRef = useRef(selectedCharacterId);
@@ -168,6 +169,11 @@ function App() {
 
       if (payload.type === "board-state" && payload.board) {
         setBoardState(payload.board);
+        return;
+      }
+
+      if (payload.type === "boxing-state" && Array.isArray(payload.rings)) {
+        setBoxingRings(payload.rings);
       }
     });
 
@@ -324,6 +330,15 @@ function App() {
     sendSocketMessage(socketRef.current, { type });
   }
 
+  function sendBoxingAction(payload) {
+    if (connectionStatus !== "online" || !socketRef.current) {
+      setMessage("Arena Boxe offline: serve il server online per combattere.");
+      return;
+    }
+
+    sendSocketMessage(socketRef.current, payload);
+  }
+
   function scrollCharacters(direction) {
     const grid = gridRef.current;
     const card = grid?.querySelector(".character-card");
@@ -384,6 +399,22 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function openBoxing() {
+    if (!selectedCharacter) {
+      setMessage("Prima scegli un personaggio, poi puoi entrare nell'Arena Boxe.");
+      return;
+    }
+
+    if (connectionStatus !== "online") {
+      setMessage("Arena Boxe e multiplayer: aspetta la connessione online.");
+      return;
+    }
+
+    startBackgroundMusic(soundEnabled);
+    setView("boxing");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
     <div className="app-shell">
       <Header
@@ -411,6 +442,7 @@ function App() {
           openSlot={openSlot}
           openBlackjack={openBlackjack}
           openBoard={openBoard}
+          openBoxing={openBoxing}
           lobby={lobby}
           badges={badges}
         />
@@ -448,7 +480,7 @@ function App() {
           onStand={() => sendBlackjackAction("blackjack-stand")}
           onBack={() => setView("lobby")}
         />
-      ) : (
+      ) : view === "board" ? (
         <BoardRoyale
           board={boardState}
           clientId={clientId}
@@ -463,6 +495,18 @@ function App() {
           onRoll={() => sendBoardAction("board-roll")}
           onBuy={() => sendBoardAction("board-buy")}
           onEndTurn={() => sendBoardAction("board-end-turn")}
+          onBack={() => setView("lobby")}
+        />
+      ) : (
+        <BoxingArena
+          rings={boxingRings}
+          clientId={clientId}
+          selectedCharacter={selectedCharacter}
+          connectionStatus={connectionStatus}
+          onJoin={(ringId) => sendBoxingAction({ type: "boxing-join", ringId })}
+          onLeave={() => sendBoxingAction({ type: "boxing-leave" })}
+          onAttack={(attack, targetId) => sendBoxingAction({ type: "boxing-attack", attack, targetId })}
+          onNewRound={(ringId) => sendBoxingAction({ type: "boxing-new-round", ringId })}
           onBack={() => setView("lobby")}
         />
       )}
@@ -595,6 +639,7 @@ function LobbyView({
   openSlot,
   openBlackjack,
   openBoard,
+  openBoxing,
   lobby,
   badges,
 }) {
@@ -637,7 +682,7 @@ function LobbyView({
         onSelectCharacter={selectCharacter}
       />
 
-      <Arcade onOpenSlot={openSlot} onOpenBlackjack={openBlackjack} onOpenBoard={openBoard} selectedCharacter={selectedCharacter} />
+      <Arcade onOpenSlot={openSlot} onOpenBlackjack={openBlackjack} onOpenBoard={openBoard} onOpenBoxing={openBoxing} selectedCharacter={selectedCharacter} />
     </>
   );
 }
@@ -751,7 +796,7 @@ function CharacterGrid({ gridRef, takenCharacters, selectedCharacterId, onSelect
   );
 }
 
-function Arcade({ onOpenSlot, onOpenBlackjack, onOpenBoard, selectedCharacter }) {
+function Arcade({ onOpenSlot, onOpenBlackjack, onOpenBoard, onOpenBoxing, selectedCharacter }) {
   return (
     <section className="arcade">
       <div className="section-heading arcade-heading">
@@ -790,10 +835,13 @@ function Arcade({ onOpenSlot, onOpenBlackjack, onOpenBoard, selectedCharacter })
             {selectedCharacter ? "Entra" : "Scegli personaggio"}
           </button>
         </article>
-        <article className="game-card">
+        <article className="game-card active">
           <span>05</span>
-          <h3>Ruota del degrado</h3>
-          <p>Minigioco party per ribaltare classifica e dignita.</p>
+          <h3>Arena Boxe</h3>
+          <p>Sticker giganti, pugni, calci e ring guardabili live.</p>
+          <button className="play-button" type="button" onClick={onOpenBoxing}>
+            {selectedCharacter ? "Combatti" : "Scegli personaggio"}
+          </button>
         </article>
       </div>
     </section>
@@ -1164,6 +1212,160 @@ function BoardSpace({ space, index, players }) {
         ))}
       </div>
       {space.ownerId ? <mark>Comprata</mark> : null}
+    </article>
+  );
+}
+
+function BoxingArena({ rings, clientId, selectedCharacter, connectionStatus, onJoin, onLeave, onAttack, onNewRound, onBack }) {
+  const [selectedRingId, setSelectedRingId] = useState(null);
+  const [selectedTargetId, setSelectedTargetId] = useState(null);
+  const activeRing = rings.find((ring) => ring.fighters.some((fighter) => fighter.id === clientId) || ring.queue.some((fighter) => fighter.id === clientId));
+  const visibleRing = activeRing ?? rings.find((ring) => ring.id === selectedRingId) ?? rings[0] ?? createEmptyBoxingRing();
+  const ownFighter = visibleRing.fighters.find((fighter) => fighter.id === clientId);
+  const opponents = ownFighter ? visibleRing.fighters.filter((fighter) => fighter.side !== ownFighter.side && fighter.status === "fighting") : [];
+  const selectedTarget = opponents.find((fighter) => fighter.id === selectedTargetId) ?? opponents[0];
+  const canAttack = visibleRing.phase === "fighting" && ownFighter?.status === "fighting" && selectedTarget;
+
+  useEffect(() => {
+    if (!selectedRingId && rings[0]) {
+      setSelectedRingId(rings[0].id);
+    }
+  }, [rings, selectedRingId]);
+
+  useEffect(() => {
+    if (opponents.length > 0 && !opponents.some((fighter) => fighter.id === selectedTargetId)) {
+      setSelectedTargetId(opponents[0].id);
+    }
+  }, [opponents, selectedTargetId]);
+
+  return (
+    <main className="boxing-page">
+      <section className="boxing-hero">
+        <div>
+          <p className="eyebrow">Gioco 05</p>
+          <h2>Arena Boxe</h2>
+          <p>Entra in un ring libero, aspetta un avversario e combatti con sticker giganti dei personaggi.</p>
+        </div>
+        <div className="slot-hero-actions">
+          <button className="ghost-button" type="button" onClick={onBack}>
+            Lobby
+          </button>
+        </div>
+      </section>
+
+      <section className="boxing-layout">
+        <aside className="boxing-ring-list">
+          {rings.map((ring) => (
+            <button
+              className={`ring-select ${visibleRing.id === ring.id ? "active" : ""}`}
+              type="button"
+              key={ring.id}
+              onClick={() => setSelectedRingId(ring.id)}
+            >
+              <strong>{ring.name}</strong>
+              <span>{boxingModeLabel(ring)}</span>
+            </button>
+          ))}
+        </aside>
+
+        <div className="boxing-stage">
+          <div className="boxing-topline">
+            <span>{connectionStatus === "online" ? "Arena online" : "Offline"}</span>
+            <strong>{visibleRing.message}</strong>
+          </div>
+
+          <div className="boxing-ring">
+            <div className="rope rope-top" />
+            <div className="rope rope-bottom" />
+            <div className="boxing-side left-side">
+              {visibleRing.fighters
+                .filter((fighter) => fighter.side === "left")
+                .map((fighter) => (
+                  <BoxerSticker
+                    key={fighter.id}
+                    fighter={fighter}
+                    active={fighter.id === clientId}
+                    hit={visibleRing.lastEvent?.targetId === fighter.id}
+                    attacking={visibleRing.lastEvent?.attackerId === fighter.id}
+                  />
+                ))}
+            </div>
+            <div className="boxing-versus">VS</div>
+            <div className="boxing-side right-side">
+              {visibleRing.fighters
+                .filter((fighter) => fighter.side === "right")
+                .map((fighter) => (
+                  <BoxerSticker
+                    key={fighter.id}
+                    fighter={fighter}
+                    active={fighter.id === clientId}
+                    hit={visibleRing.lastEvent?.targetId === fighter.id}
+                    attacking={visibleRing.lastEvent?.attackerId === fighter.id}
+                  />
+                ))}
+            </div>
+          </div>
+
+          <div className="boxing-event">
+            {visibleRing.lastEvent ? (
+              <strong>
+                {visibleRing.lastEvent.attack === "kick" ? "Calcio" : "Pugno"}: -{visibleRing.lastEvent.damage} HP
+              </strong>
+            ) : (
+              <strong>In attesa del primo colpo.</strong>
+            )}
+            {visibleRing.queue.length > 0 ? <span>In attesa: {visibleRing.queue.map((fighter) => fighter.displayName).join(", ")}</span> : null}
+          </div>
+
+          <div className="boxing-controls">
+            {!activeRing ? (
+              <button className="secondary-button" type="button" onClick={() => onJoin(visibleRing.id)} disabled={!selectedCharacter || connectionStatus !== "online"}>
+                Entra nel ring
+              </button>
+            ) : (
+              <button className="ghost-button" type="button" onClick={onLeave}>
+                Lascia arena
+              </button>
+            )}
+            <select value={selectedTarget?.id ?? ""} onChange={(event) => setSelectedTargetId(event.target.value)} disabled={opponents.length <= 1}>
+              {opponents.length === 0 ? (
+                <option value="">Nessun bersaglio</option>
+              ) : (
+                opponents.map((fighter) => (
+                  <option key={fighter.id} value={fighter.id}>
+                    {fighter.displayName}
+                  </option>
+                ))
+              )}
+            </select>
+            <button className="bet-button" type="button" onClick={() => onAttack("punch", selectedTarget?.id)} disabled={!canAttack}>
+              Pugno
+            </button>
+            <button className="spin-button" type="button" onClick={() => onAttack("kick", selectedTarget?.id)} disabled={!canAttack}>
+              Calcio
+            </button>
+            <button className="secondary-button" type="button" onClick={() => onNewRound(visibleRing.id)} disabled={visibleRing.phase === "fighting"}>
+              Nuovo round
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function BoxerSticker({ fighter, active, hit, attacking }) {
+  const character = characters.find((item) => item.id === fighter.characterId);
+  const hpPercent = Math.max(0, Math.min(100, (fighter.hp / fighter.maxHp) * 100));
+
+  return (
+    <article className={`boxer-sticker ${active ? "active" : ""} ${hit ? "hit" : ""} ${attacking ? "attacking" : ""} status-${fighter.status}`}>
+      <div className="boxer-hp">
+        <span style={{ width: `${hpPercent}%` }} />
+      </div>
+      <img src={character?.immagine} alt={fighter.displayName} />
+      <strong>{fighter.displayName}</strong>
+      <small>{fighter.status === "ko" ? "KO" : `${fighter.hp} HP`}</small>
     </article>
   );
 }
@@ -1580,6 +1782,34 @@ function createEmptyBoardState() {
     spaces: [],
     players: [],
   };
+}
+
+function createEmptyBoxingRing() {
+  return {
+    id: "ring-1",
+    name: "Ring 1",
+    phase: "waiting",
+    round: 0,
+    message: "Connessione all'arena...",
+    fighters: [],
+    queue: [],
+    lastEvent: null,
+  };
+}
+
+function boxingModeLabel(ring) {
+  const left = ring.fighters.filter((fighter) => fighter.side === "left").length;
+  const right = ring.fighters.filter((fighter) => fighter.side === "right").length;
+
+  if (left === 0 && right === 0) {
+    return ring.queue.length > 0 ? `${ring.queue.length} in attesa` : "Libero";
+  }
+
+  if (left === right) {
+    return `${left} vs ${right}`;
+  }
+
+  return `${left} vs ${right} - manca qualcuno`;
 }
 
 function boardSpaceShortLabel(space) {
