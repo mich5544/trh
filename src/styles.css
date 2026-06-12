@@ -1498,8 +1498,8 @@ h2 {
   position: relative;
   display: grid;
   justify-items: center;
-  width: min(260px, 100%);
-  min-height: 360px;
+  width: min(300px, 100%);
+  min-height: 430px;
   padding: 12px 12px 16px;
   border: 4px solid rgba(255, 255, 255, 0.78);
   background:
@@ -1540,18 +1540,18 @@ h2 {
 .boxer-figure {
   position: relative;
   width: 100%;
-  height: 210px;
+  height: 300px;
   margin-top: 4px;
 }
 
 .figure-head {
   position: absolute;
   left: 50%;
-  top: 4px;
-  width: 96px;
-  height: 78px;
+  top: 0;
+  width: 170px;
+  height: 126px;
   border: 6px solid #f8f4e8;
-  border-radius: 48% 52% 54% 46%;
+  border-radius: 48% 52% 58% 42%;
   background: #f8f4e8;
   transform: translateX(-50%) rotate(-2deg);
   box-shadow:
@@ -1563,27 +1563,39 @@ h2 {
 .figure-head::after {
   content: "";
   position: absolute;
-  top: 30px;
-  width: 7px;
-  height: 7px;
+  top: 49px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: #11131d;
 }
 
+.figure-body::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: -88px;
+  width: 54px;
+  height: 20px;
+  border-bottom: 5px solid #11131d;
+  border-radius: 50%;
+  transform: rotate(-2deg);
+}
+
 .figure-head::before {
-  left: 30px;
+  left: 56px;
 }
 
 .figure-head::after {
-  right: 30px;
+  right: 56px;
 }
 
 .figure-body {
   position: absolute;
   left: 50%;
-  top: 76px;
-  width: 8px;
-  height: 92px;
+  top: 130px;
+  width: 9px;
+  height: 112px;
   border-radius: 999px;
   background: #f8f4e8;
   transform: translateX(-50%);
@@ -1594,7 +1606,7 @@ h2 {
 .figure-leg {
   position: absolute;
   left: 50%;
-  width: 7px;
+  width: 9px;
   border-radius: 999px;
   background: #f8f4e8;
   transform-origin: top center;
@@ -1602,38 +1614,38 @@ h2 {
 }
 
 .figure-arm {
-  top: 90px;
-  height: 82px;
+  top: 126px;
+  height: 128px;
 }
 
 .figure-arm.left {
-  transform: translateX(-6px) rotate(138deg);
+  transform: translateX(-10px) rotate(34deg);
 }
 
 .figure-arm.right {
-  transform: translateX(6px) rotate(-138deg);
+  transform: translateX(10px) rotate(-34deg);
 }
 
 .figure-leg {
-  top: 158px;
-  height: 72px;
+  top: 232px;
+  height: 92px;
 }
 
 .figure-leg.left {
-  transform: translateX(-5px) rotate(26deg);
+  transform: translateX(-6px) rotate(24deg);
 }
 
 .figure-leg.right {
-  transform: translateX(5px) rotate(-26deg);
+  transform: translateX(6px) rotate(-24deg);
 }
 
 .boxer-portrait {
   position: absolute;
   left: 50%;
-  top: 58px;
+  top: 110px;
   z-index: 2;
-  width: min(176px, 76%);
-  aspect-ratio: 1;
+  width: min(190px, 70%);
+  aspect-ratio: 0.92;
   border: 5px solid #ffffff;
   border-radius: 14px;
   object-fit: cover;
@@ -1647,8 +1659,8 @@ h2 {
 .boxer-sticker strong {
   position: relative;
   z-index: 2;
-  margin-top: 8px;
-  font-size: 1.2rem;
+  margin-top: 6px;
+  font-size: 1.35rem;
   text-align: center;
 }
 
@@ -2815,17 +2827,55 @@ h2 {
   }
 
   .boxer-sticker {
-    width: min(220px, 92%);
-    min-height: 320px;
+    width: min(250px, 94%);
+    min-height: 380px;
   }
 
   .boxer-figure {
-    height: 184px;
+    height: 260px;
   }
 
   .boxer-portrait {
-    top: 54px;
-    width: min(148px, 74%);
+    top: 102px;
+    width: min(160px, 70%);
+  }
+
+  .figure-head {
+    width: 142px;
+    height: 106px;
+  }
+
+  .figure-head::before,
+  .figure-head::after {
+    top: 40px;
+  }
+
+  .figure-head::before {
+    left: 46px;
+  }
+
+  .figure-head::after {
+    right: 46px;
+  }
+
+  .figure-body {
+    top: 112px;
+    height: 96px;
+  }
+
+  .figure-body::before {
+    left: 15px;
+    top: -74px;
+  }
+
+  .figure-arm {
+    top: 112px;
+    height: 108px;
+  }
+
+  .figure-leg {
+    top: 205px;
+    height: 78px;
   }
 
   .boxing-controls {
