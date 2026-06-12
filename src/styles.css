@@ -1499,7 +1499,8 @@ h2 {
   display: grid;
   justify-items: center;
   width: min(260px, 100%);
-  padding: 12px;
+  min-height: 360px;
+  padding: 12px 12px 16px;
   border: 4px solid rgba(255, 255, 255, 0.78);
   background:
     linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 200, 87, 0.1)),
@@ -1536,21 +1537,124 @@ h2 {
   transform: rotate(8deg) translateY(12px);
 }
 
-.boxer-sticker img {
+.boxer-figure {
+  position: relative;
   width: 100%;
+  height: 210px;
+  margin-top: 4px;
+}
+
+.figure-head {
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  width: 96px;
+  height: 78px;
+  border: 6px solid #f8f4e8;
+  border-radius: 48% 52% 54% 46%;
+  background: #f8f4e8;
+  transform: translateX(-50%) rotate(-2deg);
+  box-shadow:
+    inset 0 0 0 5px #11131d,
+    0 10px 22px rgba(0, 0, 0, 0.28);
+}
+
+.figure-head::before,
+.figure-head::after {
+  content: "";
+  position: absolute;
+  top: 30px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #11131d;
+}
+
+.figure-head::before {
+  left: 30px;
+}
+
+.figure-head::after {
+  right: 30px;
+}
+
+.figure-body {
+  position: absolute;
+  left: 50%;
+  top: 76px;
+  width: 8px;
+  height: 92px;
+  border-radius: 999px;
+  background: #f8f4e8;
+  transform: translateX(-50%);
+  box-shadow: 0 0 0 3px #11131d;
+}
+
+.figure-arm,
+.figure-leg {
+  position: absolute;
+  left: 50%;
+  width: 7px;
+  border-radius: 999px;
+  background: #f8f4e8;
+  transform-origin: top center;
+  box-shadow: 0 0 0 3px #11131d;
+}
+
+.figure-arm {
+  top: 90px;
+  height: 82px;
+}
+
+.figure-arm.left {
+  transform: translateX(-6px) rotate(138deg);
+}
+
+.figure-arm.right {
+  transform: translateX(6px) rotate(-138deg);
+}
+
+.figure-leg {
+  top: 158px;
+  height: 72px;
+}
+
+.figure-leg.left {
+  transform: translateX(-5px) rotate(26deg);
+}
+
+.figure-leg.right {
+  transform: translateX(5px) rotate(-26deg);
+}
+
+.boxer-portrait {
+  position: absolute;
+  left: 50%;
+  top: 58px;
+  z-index: 2;
+  width: min(176px, 76%);
   aspect-ratio: 1;
-  border-radius: 8px;
+  border: 5px solid #ffffff;
+  border-radius: 14px;
   object-fit: cover;
   filter: saturate(1.08) contrast(1.05);
+  transform: translateX(-50%) rotate(1deg);
+  box-shadow:
+    0 16px 30px rgba(0, 0, 0, 0.42),
+    0 0 0 3px rgba(255, 200, 87, 0.58);
 }
 
 .boxer-sticker strong {
-  margin-top: 10px;
+  position: relative;
+  z-index: 2;
+  margin-top: 8px;
   font-size: 1.2rem;
   text-align: center;
 }
 
 .boxer-sticker small {
+  position: relative;
+  z-index: 2;
   color: var(--muted);
   font-weight: 1000;
   text-transform: uppercase;
@@ -2712,6 +2816,16 @@ h2 {
 
   .boxer-sticker {
     width: min(220px, 92%);
+    min-height: 320px;
+  }
+
+  .boxer-figure {
+    height: 184px;
+  }
+
+  .boxer-portrait {
+    top: 54px;
+    width: min(148px, 74%);
   }
 
   .boxing-controls {

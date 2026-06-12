@@ -1363,7 +1363,15 @@ function BoxerSticker({ fighter, active, hit, attacking }) {
       <div className="boxer-hp">
         <span style={{ width: `${hpPercent}%` }} />
       </div>
-      <img src={character?.immagine} alt={fighter.displayName} />
+      <div className="boxer-figure" aria-hidden="true">
+        <span className="figure-head" />
+        <span className="figure-body" />
+        <span className="figure-arm left" />
+        <span className="figure-arm right" />
+        <span className="figure-leg left" />
+        <span className="figure-leg right" />
+      </div>
+      <img className="boxer-portrait" src={character?.immagine} alt={fighter.displayName} />
       <strong>{fighter.displayName}</strong>
       <small>{fighter.status === "ko" ? "KO" : `${fighter.hp} HP`}</small>
     </article>
