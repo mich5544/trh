@@ -721,12 +721,41 @@ h2 {
 }
 
 .blackjack-table {
+  position: relative;
   display: grid;
   gap: 16px;
   padding: clamp(16px, 3vw, 28px);
   background:
+    radial-gradient(ellipse at 50% 44%, rgba(20, 112, 70, 0.92) 0 42%, rgba(8, 55, 43, 0.86) 43% 62%, transparent 63%),
     radial-gradient(circle at 50% 5%, rgba(133, 255, 158, 0.22), transparent 34%),
-    linear-gradient(145deg, rgba(17, 86, 55, 0.82), rgba(9, 34, 42, 0.84));
+    linear-gradient(145deg, rgba(48, 28, 16, 0.92), rgba(9, 34, 42, 0.9));
+  overflow: hidden;
+}
+
+.blackjack-table::before {
+  content: "BLACKJACK  PAYS  3:2";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 0;
+  width: min(640px, 72%);
+  height: 260px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 200, 87, 0.34);
+  border-radius: 50%;
+  color: rgba(255, 248, 234, 0.16);
+  font-size: clamp(1.4rem, 4vw, 3.2rem);
+  font-weight: 1000;
+  letter-spacing: 0.12em;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.blackjack-table > * {
+  position: relative;
+  z-index: 1;
 }
 
 .blackjack-topline,
@@ -750,15 +779,17 @@ h2 {
 }
 
 .dealer-panel {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 132px;
-  padding: 16px;
+  min-height: 172px;
+  padding: 18px;
   background:
     radial-gradient(circle at 18% 0%, rgba(255, 200, 87, 0.18), transparent 32%),
-    rgba(0, 0, 0, 0.2);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(133, 255, 158, 0.05)),
+    rgba(0, 0, 0, 0.24);
 }
 
 .dealer-panel strong {
@@ -767,8 +798,16 @@ h2 {
 }
 
 .blackjack-message {
-  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
   margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
   color: rgba(255, 255, 255, 0.82);
   font-weight: 800;
 }
@@ -796,11 +835,13 @@ h2 {
 }
 
 .blackjack-seat {
+  position: relative;
   display: grid;
   gap: 14px;
-  min-height: 230px;
+  min-height: 292px;
   padding: 14px;
   background:
+    radial-gradient(ellipse at 50% 78%, rgba(255, 200, 87, 0.12), transparent 42%),
     linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(62, 232, 255, 0.06)),
     rgba(0, 0, 0, 0.22);
 }
@@ -837,32 +878,62 @@ h2 {
 .card-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  min-height: 92px;
+  align-items: center;
+  gap: 10px;
+  min-height: 126px;
+  perspective: 900px;
 }
 
 .playing-card {
-  display: grid;
-  align-content: space-between;
-  width: 64px;
-  height: 90px;
-  padding: 8px;
+  position: relative;
+  display: block;
+  width: 86px;
+  height: 122px;
+  padding: 9px;
   border: 1px solid rgba(0, 0, 0, 0.16);
-  border-radius: 8px;
-  background: #fffaf0;
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(246, 238, 218, 0.98)),
+    #fffaf0;
   color: #11131d;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.66);
+  transform: rotate(var(--card-tilt, -1.5deg));
+  animation: dealCard 420ms cubic-bezier(0.2, 0.85, 0.24, 1) both;
 }
 
-.playing-card strong {
-  font-size: 1.35rem;
+.card-corner {
+  position: absolute;
+  left: 8px;
+  top: 7px;
+  display: grid;
+  justify-items: center;
+}
+
+.card-corner.bottom {
+  inset: auto 8px 7px auto;
+  transform: rotate(180deg);
+}
+
+.card-corner strong {
+  font-size: 1.25rem;
   line-height: 1;
 }
 
-.playing-card small {
-  font-size: 0.68rem;
+.card-corner small {
+  font-size: 1.05rem;
   font-weight: 900;
-  text-transform: uppercase;
+  line-height: 1;
+}
+
+.card-pip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  font-size: 3rem;
+  font-weight: 1000;
+  transform: translate(-50%, -50%);
 }
 
 .playing-card.red-card {
@@ -871,12 +942,55 @@ h2 {
 
 .playing-card.back {
   place-items: center;
+  display: grid;
   background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.16) 0 4px, transparent 4px 9px),
     linear-gradient(135deg, rgba(62, 232, 255, 0.72), rgba(255, 56, 100, 0.72)),
     #182033;
   color: #ffffff;
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 1000;
+}
+
+.playing-card.back span {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 2px solid rgba(255, 255, 255, 0.58);
+  border-radius: 50%;
+}
+
+.chip-stack {
+  position: relative;
+  width: 86px;
+  height: 38px;
+  flex: 0 0 auto;
+}
+
+.chip-stack.compact {
+  width: 72px;
+  height: 26px;
+}
+
+.chip-stack span {
+  position: absolute;
+  left: calc(var(--chip-index) * 9px);
+  bottom: calc(var(--chip-index) * 2px);
+  width: 30px;
+  height: 30px;
+  border: 4px dashed rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #fff 0 18%, transparent 19%),
+    conic-gradient(var(--hot), var(--gold), var(--cyan), var(--green), var(--hot));
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.28);
+}
+
+.chip-stack.compact span {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
 }
 
 .seat-score {
@@ -1089,12 +1203,6 @@ h2 {
   line-height: 1.35;
 }
 
-.board-center span {
-  color: var(--muted);
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
 .board-controls {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1116,6 +1224,62 @@ h2 {
 .board-player-row strong {
   min-width: max-content;
   text-align: right;
+}
+
+.dice-tray {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+  color: var(--muted);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.dice-tray.rolled {
+  color: var(--text);
+}
+
+.dice-tray > strong {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #08090d;
+}
+
+.dice-face {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 54px;
+  height: 54px;
+  padding: 8px;
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, #ffffff, #eadfca),
+    #ffffff;
+  box-shadow:
+    0 12px 24px rgba(0, 0, 0, 0.28),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.74);
+  animation: diceRoll 760ms cubic-bezier(0.2, 0.84, 0.28, 1) both;
+}
+
+.dice-face i {
+  border-radius: 50%;
+}
+
+.dice-face i.active {
+  background: #11131d;
+}
+
+.board-tokens span.moving {
+  animation: tokenHop 360ms ease-in-out infinite;
+  box-shadow:
+    0 0 0 3px rgba(255, 200, 87, 0.22),
+    0 8px 18px rgba(0, 0, 0, 0.36);
 }
 
 .slot-page {
@@ -1678,6 +1842,46 @@ h2 {
   }
 }
 
+@keyframes dealCard {
+  0% {
+    opacity: 0;
+    transform: translate3d(28px, -22px, 0) rotate(8deg) scale(0.86);
+  }
+
+  100% {
+    opacity: 1;
+    transform: rotate(var(--card-tilt, -1.5deg)) scale(1);
+  }
+}
+
+@keyframes diceRoll {
+  0% {
+    opacity: 0.4;
+    transform: translateY(-16px) rotate(0deg) scale(0.82);
+  }
+
+  45% {
+    opacity: 1;
+    transform: translateY(5px) rotate(210deg) scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotate(360deg) scale(1);
+  }
+}
+
+@keyframes tokenHop {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  50% {
+    transform: translateY(-8px) scale(1.08);
+  }
+}
+
 @keyframes reelRoll {
   0% {
     transform: translateY(-100%);
@@ -2068,8 +2272,21 @@ h2 {
   }
 
   .playing-card {
-    width: 56px;
-    height: 80px;
+    width: 70px;
+    height: 100px;
+    padding: 8px;
+  }
+
+  .card-pip {
+    font-size: 2.35rem;
+  }
+
+  .card-corner strong {
+    font-size: 1rem;
+  }
+
+  .card-corner small {
+    font-size: 0.86rem;
   }
 
   .board-table {

@@ -847,10 +847,14 @@ function BlackjackTable({
               <p className="eyebrow">Banco</p>
               <strong>{table.dealer?.total ? `${table.dealer.total}` : table.phase === "playing" ? "?" : "In attesa"}</strong>
             </div>
+            <ChipStack amount={table.phase === "waiting" ? 3 : 6} />
             <CardRow cards={table.dealer?.cards ?? []} />
           </div>
 
-          <p className="blackjack-message">{table.message}</p>
+          <div className="blackjack-message">
+            <span>{table.message}</span>
+            <ChipStack amount={4} compact />
+          </div>
 
           <div className="blackjack-players">
             {players.length === 0 ? (
@@ -869,6 +873,7 @@ function BlackjackTable({
                     <mark>{player.result ?? blackjackStatusLabel(player.status)}</mark>
                   </div>
                   <CardRow cards={player.hand ?? []} />
+                  <ChipStack amount={player.result === "Vinto" ? 6 : player.status === "playing" ? 4 : 2} compact />
                   <div className="seat-score">
                     <span>Totale</span>
                     <strong>{player.total || "-"}</strong>
@@ -944,16 +949,33 @@ function CardRow({ cards }) {
         cards.map((card, index) =>
           card ? (
             <span className={`playing-card ${card.suit === "H" || card.suit === "D" ? "red-card" : ""}`} key={`${card.rank}-${card.suit}-${index}`}>
-              <strong>{card.rank}</strong>
-              <small>{cardSuit(card.suit)}</small>
+              <span className="card-corner">
+                <strong>{card.rank}</strong>
+                <small>{cardSuit(card.suit)}</small>
+              </span>
+              <span className="card-pip">{cardSuit(card.suit)}</span>
+              <span className="card-corner bottom">
+                <strong>{card.rank}</strong>
+                <small>{cardSuit(card.suit)}</small>
+              </span>
             </span>
           ) : (
             <span className="playing-card back" key={`hidden-${index}`}>
-              ?
+              <span>DC</span>
             </span>
           ),
         )
       )}
+    </div>
+  );
+}
+
+function ChipStack({ amount = 4, compact = false }) {
+  return (
+    <div className={`chip-stack ${compact ? "compact" : ""}`} aria-hidden="true">
+      {Array.from({ length: amount }, (_, index) => (
+        <span key={index} style={{ "--chip-index": index }} />
+      ))}
     </div>
   );
 }
@@ -973,6 +995,10 @@ function BoardRoyale({
 }) {
   const spaces = board.spaces ?? [];
   const players = board.players ?? [];
+  const [visualPositions, setVisualPositions] = useState({});
+  const [movingPlayers, setMovingPlayers] = useState(new Set());
+  const previousPositionsRef = useRef({});
+  const moveTimersRef = useRef(new Map());
   const ownPlayer = players.find((player) => player.id === clientId);
   const turnPlayer = players.find((player) => player.id === board.turnPlayerId);
   const currentSpace = ownPlayer ? spaces[ownPlayer.position] : null;
@@ -980,6 +1006,52 @@ function BoardRoyale({
   const canBuy = board.phase === "playing" && board.turnPlayerId === clientId && ownPlayer?.canBuy;
   const canEndTurn = board.phase === "playing" && board.turnPlayerId === clientId && ownPlayer?.status === "moved";
   const canStart = connectionStatus === "online" && players.length > 0 && board.phase !== "playing";
+  const displayedPlayers = players.map((player) => ({
+    ...player,
+    displayPosition: visualPositions[player.id] ?? player.position,
+    moving: movingPlayers.has(player.id),
+  }));
+
+  useEffect(() => {
+    if (spaces.length === 0) {
+      return undefined;
+    }
+
+    for (const player of players) {
+      const previousPosition = previousPositionsRef.current[player.id];
+
+      if (previousPosition === undefined) {
+        previousPositionsRef.current[player.id] = player.position;
+        setVisualPositions((current) => ({ ...current, [player.id]: player.position }));
+        continue;
+      }
+
+      if (previousPosition !== player.position) {
+        animateBoardMove(player.id, previousPosition, player.position, spaces.length, setVisualPositions, setMovingPlayers, moveTimersRef.current);
+        previousPositionsRef.current[player.id] = player.position;
+      }
+    }
+
+    const playerIds = new Set(players.map((player) => player.id));
+    for (const playerId of Object.keys(previousPositionsRef.current)) {
+      if (!playerIds.has(playerId)) {
+        delete previousPositionsRef.current[playerId];
+        moveTimersRef.current.get(playerId)?.forEach((timer) => window.clearTimeout(timer));
+        moveTimersRef.current.delete(playerId);
+      }
+    }
+
+    return undefined;
+  }, [players, spaces.length]);
+
+  useEffect(() => {
+    return () => {
+      for (const timers of moveTimersRef.current.values()) {
+        timers.forEach((timer) => window.clearTimeout(timer));
+      }
+      moveTimersRef.current.clear();
+    };
+  }, []);
 
   return (
     <main className="board-page">
@@ -1005,14 +1077,14 @@ function BoardRoyale({
 
           <div className="board-grid">
             {spaces.map((space, index) => (
-              <BoardSpace key={space.id} space={space} index={index} players={players.filter((player) => player.position === index)} />
+              <BoardSpace key={space.id} space={space} index={index} players={displayedPlayers.filter((player) => player.displayPosition === index)} />
             ))}
           </div>
 
           <div className="board-center">
             <p className="eyebrow">Ultimo evento</p>
             <strong>{board.message}</strong>
-            <span>{board.lastRoll ? `Dadi: ${board.lastRoll.join(" + ")} = ${board.lastRoll[0] + board.lastRoll[1]}` : "Dadi fermi"}</span>
+            <DiceTray dice={board.lastRoll} />
           </div>
 
           <div className="board-controls">
@@ -1086,13 +1158,39 @@ function BoardSpace({ space, index, players }) {
       <small>{boardSpaceShortLabel(space)}</small>
       <div className="board-tokens">
         {players.map((player) => (
-          <span key={player.id} title={player.displayName}>
+          <span className={player.moving ? "moving" : ""} key={player.id} title={player.displayName}>
             {player.displayName.slice(0, 2)}
           </span>
         ))}
       </div>
       {space.ownerId ? <mark>Comprata</mark> : null}
     </article>
+  );
+}
+
+function DiceTray({ dice }) {
+  return (
+    <div className={`dice-tray ${dice ? "rolled" : ""}`} key={dice ? dice.join("-") : "idle"}>
+      {dice ? (
+        <>
+          <DiceFace value={dice[0]} />
+          <DiceFace value={dice[1]} />
+          <strong>{dice[0] + dice[1]}</strong>
+        </>
+      ) : (
+        <span>Dadi fermi</span>
+      )}
+    </div>
+  );
+}
+
+function DiceFace({ value }) {
+  return (
+    <span className="dice-face" aria-label={`Dado ${value}`}>
+      {Array.from({ length: 9 }, (_, index) => (
+        <i key={index} className={dicePips[value].includes(index) ? "active" : ""} />
+      ))}
+    </span>
   );
 }
 
@@ -1521,6 +1619,42 @@ function boardSpaceDescription(space) {
   return descriptions[space.type] ?? "Casella speciale.";
 }
 
+function animateBoardMove(playerId, fromPosition, toPosition, boardSize, setVisualPositions, setMovingPlayers, timersByPlayer) {
+  timersByPlayer.get(playerId)?.forEach((timer) => window.clearTimeout(timer));
+  timersByPlayer.delete(playerId);
+
+  const steps = [];
+  let position = fromPosition;
+
+  while (position !== toPosition && steps.length <= boardSize) {
+    position = (position + 1) % boardSize;
+    steps.push(position);
+  }
+
+  if (steps.length === 0) {
+    setVisualPositions((current) => ({ ...current, [playerId]: toPosition }));
+    return;
+  }
+
+  setMovingPlayers((current) => new Set(current).add(playerId));
+
+  const timers = steps.map((stepPosition, index) =>
+    window.setTimeout(() => {
+      setVisualPositions((current) => ({ ...current, [playerId]: stepPosition }));
+      if (index === steps.length - 1) {
+        setMovingPlayers((current) => {
+          const next = new Set(current);
+          next.delete(playerId);
+          return next;
+        });
+        timersByPlayer.delete(playerId);
+      }
+    }, 360 * (index + 1)),
+  );
+
+  timersByPlayer.set(playerId, timers);
+}
+
 function blackjackStatusLabel(status) {
   const labels = {
     joined: "Seduto",
@@ -1535,14 +1669,23 @@ function blackjackStatusLabel(status) {
 
 function cardSuit(suit) {
   const suits = {
-    S: "picche",
-    H: "cuori",
-    D: "quadri",
-    C: "fiori",
+    S: "♠",
+    H: "♥",
+    D: "♦",
+    C: "♣",
   };
 
   return suits[suit] ?? suit;
 }
+
+const dicePips = {
+  1: [4],
+  2: [0, 8],
+  3: [0, 4, 8],
+  4: [0, 2, 6, 8],
+  5: [0, 2, 4, 6, 8],
+  6: [0, 2, 3, 5, 6, 8],
+};
 
 let backgroundMusic;
 
