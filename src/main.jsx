@@ -37,6 +37,7 @@ function App() {
   const [history, setHistory] = useState(savedState.history);
   const [badges, setBadges] = useState(savedState.badges);
   const [soundEnabled, setSoundEnabled] = useState(savedState.soundEnabled);
+  const [musicPlaying, setMusicPlaying] = useState(false);
   const [clientId] = useState(() => savedState.clientId ?? makeId());
   const [connectionStatus, setConnectionStatus] = useState("connecting");
   const [chatMessages, setChatMessages] = useState([]);
@@ -177,32 +178,48 @@ function App() {
   useEffect(() => {
     if (!soundEnabled) {
       stopBackgroundMusic();
+      setMusicPlaying(false);
       return undefined;
     }
 
-    const startMusic = () => startBackgroundMusic(true);
+    attemptStartMusic();
 
-    window.addEventListener("pointerdown", startMusic, { once: true });
-    window.addEventListener("keydown", startMusic, { once: true });
+    const startMusic = () => {
+      attemptStartMusic();
+    };
+
+    window.addEventListener("pointerdown", startMusic, { once: true, capture: true });
+    window.addEventListener("keydown", startMusic, { once: true, capture: true });
 
     return () => {
-      window.removeEventListener("pointerdown", startMusic);
-      window.removeEventListener("keydown", startMusic);
+      window.removeEventListener("pointerdown", startMusic, { capture: true });
+      window.removeEventListener("keydown", startMusic, { capture: true });
     };
   }, [soundEnabled]);
 
-  function toggleSound() {
-    setSoundEnabled((enabled) => {
-      const nextEnabled = !enabled;
-
-      if (nextEnabled) {
-        startBackgroundMusic(true);
-      } else {
-        stopBackgroundMusic();
-      }
-
-      return nextEnabled;
+  function attemptStartMusic() {
+    startBackgroundMusic(soundEnabled).then((started) => {
+      setMusicPlaying(started);
     });
+  }
+
+  function toggleSound() {
+    if (soundEnabled && !musicPlaying) {
+      attemptStartMusic();
+      return;
+    }
+
+    const nextEnabled = !soundEnabled;
+    setSoundEnabled(nextEnabled);
+
+    if (nextEnabled) {
+      startBackgroundMusic(true).then((started) => {
+        setMusicPlaying(started);
+      });
+    } else {
+      stopBackgroundMusic();
+      setMusicPlaying(false);
+    }
   }
 
   function selectCharacter(characterId) {
@@ -309,6 +326,7 @@ function App() {
         availableCount={availableCount}
         connectionStatus={connectionStatus}
         soundEnabled={soundEnabled}
+        musicPlaying={musicPlaying}
         onToggleSound={toggleSound}
         onReset={resetLobby}
       />
@@ -344,7 +362,6 @@ function App() {
           setSoundEnabled={setSoundEnabled}
           gameState={slotState}
           onBack={() => {
-            stopBackgroundMusic();
             setView("lobby");
           }}
         />
@@ -363,7 +380,7 @@ function App() {
   );
 }
 
-function Header({ availableCount, connectionStatus, soundEnabled, onToggleSound, onReset }) {
+function Header({ availableCount, connectionStatus, soundEnabled, musicPlaying, onToggleSound, onReset }) {
   return (
     <header className="topbar">
       <div>
@@ -376,7 +393,7 @@ function Header({ availableCount, connectionStatus, soundEnabled, onToggleSound,
           <small>{connectionStatus === "online" ? "posti online" : "posti locali"}</small>
         </div>
         <button className="ghost-button audio-button" type="button" onClick={onToggleSound} aria-pressed={soundEnabled}>
-          Musica {soundEnabled ? "on" : "off"}
+          Musica {soundEnabled && musicPlaying ? "on" : soundEnabled ? "avvia" : "off"}
         </button>
         <button className="ghost-button" type="button" onClick={onReset}>
           Reset
@@ -698,12 +715,6 @@ function SlotMachine({
 
   const jackpotSymbol = useMemo(() => selectedCharacter ?? characters[0], [selectedCharacter]);
   const canSpin = balance >= bet && !spinning;
-
-  useEffect(() => {
-    return () => {
-      stopBackgroundMusic();
-    };
-  }, []);
 
   function spin() {
     if (!canSpin) {
@@ -1051,16 +1062,24 @@ let backgroundMusic;
 
 function startBackgroundMusic(enabled) {
   if (!enabled || typeof window === "undefined") {
-    return;
+    return Promise.resolve(false);
   }
 
   if (!backgroundMusic) {
     backgroundMusic = new Audio(circusMusicUrl);
     backgroundMusic.loop = true;
     backgroundMusic.volume = 0.28;
+    backgroundMusic.preload = "auto";
   }
 
-  backgroundMusic.play().catch(() => {});
+  if (!backgroundMusic.paused) {
+    return Promise.resolve(true);
+  }
+
+  return backgroundMusic
+    .play()
+    .then(() => true)
+    .catch(() => false);
 }
 
 function stopBackgroundMusic() {
