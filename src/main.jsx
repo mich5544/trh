@@ -43,6 +43,7 @@ function App() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [blackjackTable, setBlackjackTable] = useState(createEmptyBlackjackTable());
   const gridRef = useRef(null);
   const socketRef = useRef(null);
   const selectedCharacterIdRef = useRef(selectedCharacterId);
@@ -156,6 +157,11 @@ function App() {
         if (!chatOpenRef.current && payload.message.clientId !== clientId) {
           setUnreadChatCount((current) => Math.min(current + 1, 99));
         }
+        return;
+      }
+
+      if (payload.type === "blackjack-state" && payload.table) {
+        setBlackjackTable(payload.table);
       }
     });
 
@@ -294,6 +300,15 @@ function App() {
     sendSocketMessage(socketRef.current, { type: "chat", text: trimmedText });
   }
 
+  function sendBlackjackAction(type) {
+    if (connectionStatus !== "online" || !socketRef.current) {
+      setMessage("Tavolo carte offline: serve il server online per giocare in gruppo.");
+      return;
+    }
+
+    sendSocketMessage(socketRef.current, { type });
+  }
+
   function scrollCharacters(direction) {
     const grid = gridRef.current;
     const card = grid?.querySelector(".character-card");
@@ -317,6 +332,23 @@ function App() {
 
     startBackgroundMusic(soundEnabled);
     setView("slot");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openBlackjack() {
+    if (!selectedCharacter) {
+      setMessage("Prima scegli un personaggio, poi puoi sederti al tavolo carte.");
+      return;
+    }
+
+    if (connectionStatus !== "online") {
+      setMessage("Il tavolo carte e multiplayer: aspetta la connessione online.");
+      return;
+    }
+
+    startBackgroundMusic(soundEnabled);
+    sendBlackjackAction("blackjack-join");
+    setView("blackjack");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -345,10 +377,11 @@ function App() {
           selectedCharacterId={selectedCharacterId}
           selectCharacter={selectCharacter}
           openSlot={openSlot}
+          openBlackjack={openBlackjack}
           lobby={lobby}
           badges={badges}
         />
-      ) : (
+      ) : view === "slot" ? (
         <SlotMachine
           balance={balance}
           setBalance={setBalance}
@@ -364,6 +397,23 @@ function App() {
           onBack={() => {
             setView("lobby");
           }}
+        />
+      ) : (
+        <BlackjackTable
+          table={blackjackTable}
+          clientId={clientId}
+          currentPlayer={currentPlayer}
+          selectedCharacter={selectedCharacter}
+          connectionStatus={connectionStatus}
+          onJoin={() => sendBlackjackAction("blackjack-join")}
+          onLeave={() => {
+            sendBlackjackAction("blackjack-leave");
+            setView("lobby");
+          }}
+          onStart={() => sendBlackjackAction("blackjack-start")}
+          onHit={() => sendBlackjackAction("blackjack-hit")}
+          onStand={() => sendBlackjackAction("blackjack-stand")}
+          onBack={() => setView("lobby")}
         />
       )}
 
@@ -493,6 +543,7 @@ function LobbyView({
   selectedCharacterId,
   selectCharacter,
   openSlot,
+  openBlackjack,
   lobby,
   badges,
 }) {
@@ -535,7 +586,7 @@ function LobbyView({
         onSelectCharacter={selectCharacter}
       />
 
-      <Arcade onOpenSlot={openSlot} selectedCharacter={selectedCharacter} />
+      <Arcade onOpenSlot={openSlot} onOpenBlackjack={openBlackjack} selectedCharacter={selectedCharacter} />
     </>
   );
 }
@@ -649,7 +700,7 @@ function CharacterGrid({ gridRef, takenCharacters, selectedCharacterId, onSelect
   );
 }
 
-function Arcade({ onOpenSlot, selectedCharacter }) {
+function Arcade({ onOpenSlot, onOpenBlackjack, selectedCharacter }) {
   return (
     <section className="arcade">
       <div className="section-heading arcade-heading">
@@ -667,10 +718,13 @@ function Arcade({ onOpenSlot, selectedCharacter }) {
             {selectedCharacter ? "Gioca" : "Scegli personaggio"}
           </button>
         </article>
-        <article className="game-card">
+        <article className="game-card active">
           <span>02</span>
           <h3>Tavolo carte</h3>
           <p>Blackjack e sfide veloci con saldo rigorosamente fittizio.</p>
+          <button className="play-button" type="button" onClick={onOpenBlackjack}>
+            {selectedCharacter ? "Siediti" : "Scegli personaggio"}
+          </button>
         </article>
         <article className="game-card">
           <span>03</span>
@@ -689,6 +743,164 @@ function Arcade({ onOpenSlot, selectedCharacter }) {
         </article>
       </div>
     </section>
+  );
+}
+
+function BlackjackTable({
+  table,
+  clientId,
+  currentPlayer,
+  selectedCharacter,
+  connectionStatus,
+  onJoin,
+  onLeave,
+  onStart,
+  onHit,
+  onStand,
+  onBack,
+}) {
+  const players = table.players ?? [];
+  const ownSeat = players.find((player) => player.id === clientId);
+  const canPlay = table.phase === "playing" && ownSeat?.status === "playing";
+  const canStart = connectionStatus === "online" && players.length > 0 && table.phase !== "playing";
+
+  return (
+    <main className="blackjack-page">
+      <section className="blackjack-hero">
+        <div>
+          <p className="eyebrow">Gioco 02</p>
+          <h2>Tavolo carte</h2>
+          <p>
+            Blackjack di gruppo: ogni giocatore vede il tavolo live, pesca o resta, poi il banco chiude quando tutti hanno deciso.
+          </p>
+        </div>
+        <div className="slot-hero-actions">
+          <button className="ghost-button" type="button" onClick={onBack}>
+            Lobby
+          </button>
+        </div>
+      </section>
+
+      <section className="blackjack-layout">
+        <div className="blackjack-table">
+          <div className="blackjack-topline">
+            <span>{connectionStatus === "online" ? "Tavolo online" : "Offline"}</span>
+            <strong>Round {table.round || 0}</strong>
+          </div>
+
+          <div className="dealer-panel">
+            <div>
+              <p className="eyebrow">Banco</p>
+              <strong>{table.dealer?.total ? `${table.dealer.total}` : table.phase === "playing" ? "?" : "In attesa"}</strong>
+            </div>
+            <CardRow cards={table.dealer?.cards ?? []} />
+          </div>
+
+          <p className="blackjack-message">{table.message}</p>
+
+          <div className="blackjack-players">
+            {players.length === 0 ? (
+              <div className="empty-table">
+                <strong>Nessuno al tavolo</strong>
+                <span>Siediti e chiama gli altri nella chat.</span>
+              </div>
+            ) : (
+              players.map((player) => (
+                <article className={`blackjack-seat ${player.id === clientId ? "own-seat" : ""}`} key={player.id}>
+                  <div className="seat-heading">
+                    <div>
+                      <strong>{player.displayName}</strong>
+                      <span>{player.online ? "online" : "assente"}</span>
+                    </div>
+                    <mark>{player.result ?? blackjackStatusLabel(player.status)}</mark>
+                  </div>
+                  <CardRow cards={player.hand ?? []} />
+                  <div className="seat-score">
+                    <span>Totale</span>
+                    <strong>{player.total || "-"}</strong>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+
+          <div className="blackjack-controls">
+            {!ownSeat ? (
+              <button className="secondary-button" type="button" onClick={onJoin} disabled={connectionStatus !== "online" || !selectedCharacter}>
+                Siediti
+              </button>
+            ) : (
+              <button className="ghost-button" type="button" onClick={onLeave}>
+                Lascia
+              </button>
+            )}
+            <button className="secondary-button" type="button" onClick={onStart} disabled={!canStart}>
+              {table.phase === "finished" ? "Nuovo round" : "Avvia round"}
+            </button>
+            <button className="bet-button" type="button" onClick={onHit} disabled={!canPlay}>
+              Carta
+            </button>
+            <button className="bet-button" type="button" onClick={onStand} disabled={!canPlay}>
+              Sto
+            </button>
+          </div>
+        </div>
+
+        <aside className="blackjack-sidebar">
+          <div className="paytable">
+            <p className="eyebrow">Regole rapide</p>
+            <div>
+              <span>
+                Obiettivo
+                <small>Arriva piu vicino a 21 del banco senza sballare.</small>
+              </span>
+              <strong>21</strong>
+            </div>
+            <div>
+              <span>
+                Banco
+                <small>Pesca automaticamente fino a 17.</small>
+              </span>
+              <strong>17</strong>
+            </div>
+            <div>
+              <span>
+                Gruppo
+                <small>Il round si chiude quando tutti restano o sballano.</small>
+              </span>
+              <strong>{players.length}/14</strong>
+            </div>
+          </div>
+          <div className="choice-panel blackjack-note">
+            <strong>{currentPlayer ?? "Ospite"}</strong>
+            <span>Il saldo non viene ancora modificato: questa prima versione serve per giocare insieme e testare il tavolo live.</span>
+          </div>
+        </aside>
+      </section>
+    </main>
+  );
+}
+
+function CardRow({ cards }) {
+  return (
+    <div className="card-row">
+      {cards.length === 0 ? (
+        <span className="playing-card back">?</span>
+      ) : (
+        cards.map((card, index) =>
+          card ? (
+            <span className={`playing-card ${card.suit === "H" || card.suit === "D" ? "red-card" : ""}`} key={`${card.rank}-${card.suit}-${index}`}>
+              <strong>{card.rank}</strong>
+              <small>{cardSuit(card.suit)}</small>
+            </span>
+          ) : (
+            <span className="playing-card back" key={`hidden-${index}`}>
+              ?
+            </span>
+          ),
+        )
+      )}
+    </div>
   );
 }
 
@@ -1056,6 +1268,39 @@ function parseSocketMessage(rawMessage) {
   } catch {
     return null;
   }
+}
+
+function createEmptyBlackjackTable() {
+  return {
+    phase: "waiting",
+    round: 0,
+    message: "Connessione al tavolo carte...",
+    dealer: { cards: [], total: null },
+    players: [],
+  };
+}
+
+function blackjackStatusLabel(status) {
+  const labels = {
+    joined: "Seduto",
+    playing: "Turno",
+    standing: "Sto",
+    bust: "Sballato",
+    done: "Fine",
+  };
+
+  return labels[status] ?? "Tavolo";
+}
+
+function cardSuit(suit) {
+  const suits = {
+    S: "picche",
+    H: "cuori",
+    D: "quadri",
+    C: "fiori",
+  };
+
+  return suits[suit] ?? suit;
 }
 
 let backgroundMusic;
