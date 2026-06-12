@@ -1519,6 +1519,51 @@ h2 {
   border-color: var(--gold);
 }
 
+.boxer-sticker.actionable {
+  cursor: pointer;
+}
+
+.boxer-sticker.actionable::after {
+  content: "";
+  position: absolute;
+  inset: 52px 10px 52px;
+  z-index: 5;
+  border: 1px dashed rgba(255, 200, 87, 0.34);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.hit-zones {
+  position: absolute;
+  inset: 52px 10px 52px;
+  z-index: 6;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  pointer-events: none;
+}
+
+.hit-zones span {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+  color: rgba(255, 248, 234, 0.48);
+  font-size: 0.68rem;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+
+.hit-zones span:first-child {
+  align-items: flex-start;
+  padding-top: 8px;
+}
+
+.hit-zones span:last-child {
+  align-items: flex-end;
+  padding-bottom: 8px;
+  border-top: 1px dashed rgba(255, 200, 87, 0.24);
+}
+
 .boxer-sticker.attacking {
   animation: boxerAttack 460ms ease both;
 }
@@ -1712,7 +1757,7 @@ h2 {
 
 .boxing-controls {
   display: grid;
-  grid-template-columns: 1fr 1fr repeat(3, minmax(0, 0.85fr));
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
 }
 
@@ -2892,12 +2937,11 @@ h2 {
   }
 
   .boxing-controls {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
-  .boxing-controls .spin-button,
   .boxing-controls .secondary-button:last-child {
-    grid-column: 1 / -1;
+    grid-column: auto;
   }
 
   .blackjack-table {

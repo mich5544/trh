@@ -1282,11 +1282,13 @@ function BoxingArena({ rings, clientId, selectedCharacter, connectionStatus, onJ
                 .filter((fighter) => fighter.side === "left")
                 .map((fighter) => (
                   <BoxerSticker
-                    key={fighter.id}
+                    key={boxingStickerKey(fighter, visibleRing.lastEvent)}
                     fighter={fighter}
                     active={fighter.id === clientId}
                     hit={visibleRing.lastEvent?.targetId === fighter.id}
                     attacking={visibleRing.lastEvent?.attackerId === fighter.id}
+                    actionable={fighter.id === clientId && canAttack}
+                    onAction={(attack) => onAttack(attack, selectedTarget?.id)}
                   />
                 ))}
             </div>
@@ -1296,11 +1298,13 @@ function BoxingArena({ rings, clientId, selectedCharacter, connectionStatus, onJ
                 .filter((fighter) => fighter.side === "right")
                 .map((fighter) => (
                   <BoxerSticker
-                    key={fighter.id}
+                    key={boxingStickerKey(fighter, visibleRing.lastEvent)}
                     fighter={fighter}
                     active={fighter.id === clientId}
                     hit={visibleRing.lastEvent?.targetId === fighter.id}
                     attacking={visibleRing.lastEvent?.attackerId === fighter.id}
+                    actionable={fighter.id === clientId && canAttack}
+                    onAction={(attack) => onAttack(attack, selectedTarget?.id)}
                   />
                 ))}
             </div>
@@ -1338,12 +1342,6 @@ function BoxingArena({ rings, clientId, selectedCharacter, connectionStatus, onJ
                 ))
               )}
             </select>
-            <button className="bet-button" type="button" onClick={() => onAttack("punch", selectedTarget?.id)} disabled={!canAttack}>
-              Pugno
-            </button>
-            <button className="spin-button" type="button" onClick={() => onAttack("kick", selectedTarget?.id)} disabled={!canAttack}>
-              Calcio
-            </button>
             <button className="secondary-button" type="button" onClick={() => onNewRound(visibleRing.id)} disabled={visibleRing.phase === "fighting"}>
               Nuovo round
             </button>
@@ -1354,15 +1352,42 @@ function BoxingArena({ rings, clientId, selectedCharacter, connectionStatus, onJ
   );
 }
 
-function BoxerSticker({ fighter, active, hit, attacking }) {
+function BoxerSticker({ fighter, active, hit, attacking, actionable, onAction }) {
   const character = characters.find((item) => item.id === fighter.characterId);
   const hpPercent = Math.max(0, Math.min(100, (fighter.hp / fighter.maxHp) * 100));
 
+  function handleStickerPress(event) {
+    if (!actionable) {
+      return;
+    }
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const y = event.clientY - bounds.top;
+    onAction(y < bounds.height * 0.58 ? "punch" : "kick");
+  }
+
   return (
-    <article className={`boxer-sticker ${active ? "active" : ""} ${hit ? "hit" : ""} ${attacking ? "attacking" : ""} status-${fighter.status}`}>
+    <article
+      className={`boxer-sticker ${active ? "active" : ""} ${actionable ? "actionable" : ""} ${hit ? "hit" : ""} ${attacking ? "attacking" : ""} status-${fighter.status}`}
+      onClick={handleStickerPress}
+      role={actionable ? "button" : undefined}
+      tabIndex={actionable ? 0 : undefined}
+      onKeyDown={(event) => {
+        if (actionable && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onAction("punch");
+        }
+      }}
+    >
       <div className="boxer-hp">
         <span style={{ width: `${hpPercent}%` }} />
       </div>
+      {actionable ? (
+        <div className="hit-zones" aria-hidden="true">
+          <span>Pugno</span>
+          <span>Calcio</span>
+        </div>
+      ) : null}
       <div className="boxer-figure" aria-hidden="true">
         <span className="figure-head" />
         <span className="figure-body" />
@@ -1818,6 +1843,10 @@ function boxingModeLabel(ring) {
   }
 
   return `${left} vs ${right} - manca qualcuno`;
+}
+
+function boxingStickerKey(fighter, lastEvent) {
+  return lastEvent && (lastEvent.attackerId === fighter.id || lastEvent.targetId === fighter.id) ? `${fighter.id}-${lastEvent.id}` : fighter.id;
 }
 
 function boardSpaceShortLabel(space) {
