@@ -44,6 +44,7 @@ function App() {
   const [chatOpen, setChatOpen] = useState(false);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [blackjackTable, setBlackjackTable] = useState(createEmptyBlackjackTable());
+  const [boardState, setBoardState] = useState(createEmptyBoardState());
   const gridRef = useRef(null);
   const socketRef = useRef(null);
   const selectedCharacterIdRef = useRef(selectedCharacterId);
@@ -162,6 +163,11 @@ function App() {
 
       if (payload.type === "blackjack-state" && payload.table) {
         setBlackjackTable(payload.table);
+        return;
+      }
+
+      if (payload.type === "board-state" && payload.board) {
+        setBoardState(payload.board);
       }
     });
 
@@ -309,6 +315,15 @@ function App() {
     sendSocketMessage(socketRef.current, { type });
   }
 
+  function sendBoardAction(type) {
+    if (connectionStatus !== "online" || !socketRef.current) {
+      setMessage("Board Royale offline: serve il server online per giocare insieme.");
+      return;
+    }
+
+    sendSocketMessage(socketRef.current, { type });
+  }
+
   function scrollCharacters(direction) {
     const grid = gridRef.current;
     const card = grid?.querySelector(".character-card");
@@ -352,6 +367,23 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function openBoard() {
+    if (!selectedCharacter) {
+      setMessage("Prima scegli un personaggio, poi puoi entrare nel Board Royale.");
+      return;
+    }
+
+    if (connectionStatus !== "online") {
+      setMessage("Board Royale e multiplayer: aspetta la connessione online.");
+      return;
+    }
+
+    startBackgroundMusic(soundEnabled);
+    sendBoardAction("board-join");
+    setView("board");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
     <div className="app-shell">
       <Header
@@ -378,6 +410,7 @@ function App() {
           selectCharacter={selectCharacter}
           openSlot={openSlot}
           openBlackjack={openBlackjack}
+          openBoard={openBoard}
           lobby={lobby}
           badges={badges}
         />
@@ -398,7 +431,7 @@ function App() {
             setView("lobby");
           }}
         />
-      ) : (
+      ) : view === "blackjack" ? (
         <BlackjackTable
           table={blackjackTable}
           clientId={clientId}
@@ -413,6 +446,23 @@ function App() {
           onStart={() => sendBlackjackAction("blackjack-start")}
           onHit={() => sendBlackjackAction("blackjack-hit")}
           onStand={() => sendBlackjackAction("blackjack-stand")}
+          onBack={() => setView("lobby")}
+        />
+      ) : (
+        <BoardRoyale
+          board={boardState}
+          clientId={clientId}
+          selectedCharacter={selectedCharacter}
+          connectionStatus={connectionStatus}
+          onJoin={() => sendBoardAction("board-join")}
+          onLeave={() => {
+            sendBoardAction("board-leave");
+            setView("lobby");
+          }}
+          onStart={() => sendBoardAction("board-start")}
+          onRoll={() => sendBoardAction("board-roll")}
+          onBuy={() => sendBoardAction("board-buy")}
+          onEndTurn={() => sendBoardAction("board-end-turn")}
           onBack={() => setView("lobby")}
         />
       )}
@@ -544,6 +594,7 @@ function LobbyView({
   selectCharacter,
   openSlot,
   openBlackjack,
+  openBoard,
   lobby,
   badges,
 }) {
@@ -586,7 +637,7 @@ function LobbyView({
         onSelectCharacter={selectCharacter}
       />
 
-      <Arcade onOpenSlot={openSlot} onOpenBlackjack={openBlackjack} selectedCharacter={selectedCharacter} />
+      <Arcade onOpenSlot={openSlot} onOpenBlackjack={openBlackjack} onOpenBoard={openBoard} selectedCharacter={selectedCharacter} />
     </>
   );
 }
@@ -700,7 +751,7 @@ function CharacterGrid({ gridRef, takenCharacters, selectedCharacterId, onSelect
   );
 }
 
-function Arcade({ onOpenSlot, onOpenBlackjack, selectedCharacter }) {
+function Arcade({ onOpenSlot, onOpenBlackjack, onOpenBoard, selectedCharacter }) {
   return (
     <section className="arcade">
       <div className="section-heading arcade-heading">
@@ -731,10 +782,13 @@ function Arcade({ onOpenSlot, onOpenBlackjack, selectedCharacter }) {
           <h3>Scacchi</h3>
           <p>Timer, ranking e partite 1v1 dentro la lobby.</p>
         </article>
-        <article className="game-card">
+        <article className="game-card active">
           <span>04</span>
           <h3>Board Royale</h3>
           <p>Il tabellone stile Monopoli con pedine-faccia e caselle custom.</p>
+          <button className="play-button" type="button" onClick={onOpenBoard}>
+            {selectedCharacter ? "Entra" : "Scegli personaggio"}
+          </button>
         </article>
         <article className="game-card">
           <span>05</span>
@@ -901,6 +955,144 @@ function CardRow({ cards }) {
         )
       )}
     </div>
+  );
+}
+
+function BoardRoyale({
+  board,
+  clientId,
+  selectedCharacter,
+  connectionStatus,
+  onJoin,
+  onLeave,
+  onStart,
+  onRoll,
+  onBuy,
+  onEndTurn,
+  onBack,
+}) {
+  const spaces = board.spaces ?? [];
+  const players = board.players ?? [];
+  const ownPlayer = players.find((player) => player.id === clientId);
+  const turnPlayer = players.find((player) => player.id === board.turnPlayerId);
+  const currentSpace = ownPlayer ? spaces[ownPlayer.position] : null;
+  const canRoll = board.phase === "playing" && board.turnPlayerId === clientId && ownPlayer?.status === "turn";
+  const canBuy = board.phase === "playing" && board.turnPlayerId === clientId && ownPlayer?.canBuy;
+  const canEndTurn = board.phase === "playing" && board.turnPlayerId === clientId && ownPlayer?.status === "moved";
+  const canStart = connectionStatus === "online" && players.length > 0 && board.phase !== "playing";
+
+  return (
+    <main className="board-page">
+      <section className="board-hero">
+        <div>
+          <p className="eyebrow">Gioco 04</p>
+          <h2>Board Royale</h2>
+          <p>Monopoli rapido di gruppo: tira i dadi, compra caselle, paga affitti e prova a restare ricco di soldi finti.</p>
+        </div>
+        <div className="slot-hero-actions">
+          <button className="ghost-button" type="button" onClick={onBack}>
+            Lobby
+          </button>
+        </div>
+      </section>
+
+      <section className="board-layout">
+        <div className="board-table">
+          <div className="board-topline">
+            <span>{connectionStatus === "online" ? "Board online" : "Offline"}</span>
+            <strong>{turnPlayer ? `Turno: ${turnPlayer.displayName}` : "In attesa"}</strong>
+          </div>
+
+          <div className="board-grid">
+            {spaces.map((space, index) => (
+              <BoardSpace key={space.id} space={space} index={index} players={players.filter((player) => player.position === index)} />
+            ))}
+          </div>
+
+          <div className="board-center">
+            <p className="eyebrow">Ultimo evento</p>
+            <strong>{board.message}</strong>
+            <span>{board.lastRoll ? `Dadi: ${board.lastRoll.join(" + ")} = ${board.lastRoll[0] + board.lastRoll[1]}` : "Dadi fermi"}</span>
+          </div>
+
+          <div className="board-controls">
+            {!ownPlayer ? (
+              <button className="secondary-button" type="button" onClick={onJoin} disabled={connectionStatus !== "online" || !selectedCharacter}>
+                Entra
+              </button>
+            ) : (
+              <button className="ghost-button" type="button" onClick={onLeave}>
+                Lascia
+              </button>
+            )}
+            <button className="secondary-button" type="button" onClick={onStart} disabled={!canStart}>
+              {board.phase === "playing" ? "In corso" : "Avvia"}
+            </button>
+            <button className="bet-button" type="button" onClick={onRoll} disabled={!canRoll}>
+              Tira dadi
+            </button>
+            <button className="bet-button" type="button" onClick={onBuy} disabled={!canBuy}>
+              Compra
+            </button>
+            <button className="spin-button" type="button" onClick={onEndTurn} disabled={!canEndTurn}>
+              Fine turno
+            </button>
+          </div>
+        </div>
+
+        <aside className="board-sidebar">
+          <div className="paytable">
+            <p className="eyebrow">Giocatori</p>
+            {players.length === 0 ? (
+              <span className="empty-history">Ancora nessuno sul tabellone.</span>
+            ) : (
+              players.map((player) => (
+                <div className="board-player-row" key={player.id}>
+                  <span>
+                    {player.displayName}
+                    <small>{spaces[player.position]?.name ?? "Tabellone"}</small>
+                  </span>
+                  <strong>{formatCoins(player.balance)} DC</strong>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="paytable">
+            <p className="eyebrow">Casella attuale</p>
+            {currentSpace ? (
+              <div>
+                <span>
+                  {currentSpace.name}
+                  <small>{boardSpaceDescription(currentSpace)}</small>
+                </span>
+                <strong>{currentSpace.price ? `${currentSpace.price} DC` : "-"}</strong>
+              </div>
+            ) : (
+              <span className="empty-history">Entra nel board per vedere la tua posizione.</span>
+            )}
+          </div>
+        </aside>
+      </section>
+    </main>
+  );
+}
+
+function BoardSpace({ space, index, players }) {
+  return (
+    <article className={`board-space board-${space.type}`} style={{ "--space-color": space.color ?? "#ffffff" }}>
+      <span className="board-index">{String(index + 1).padStart(2, "0")}</span>
+      <strong>{space.name}</strong>
+      <small>{boardSpaceShortLabel(space)}</small>
+      <div className="board-tokens">
+        {players.map((player) => (
+          <span key={player.id} title={player.displayName}>
+            {player.displayName.slice(0, 2)}
+          </span>
+        ))}
+      </div>
+      {space.ownerId ? <mark>Comprata</mark> : null}
+    </article>
   );
 }
 
@@ -1278,6 +1470,55 @@ function createEmptyBlackjackTable() {
     dealer: { cards: [], total: null },
     players: [],
   };
+}
+
+function createEmptyBoardState() {
+  return {
+    phase: "waiting",
+    round: 0,
+    turnPlayerId: null,
+    lastRoll: null,
+    message: "Connessione al Board Royale...",
+    spaces: [],
+    players: [],
+  };
+}
+
+function boardSpaceShortLabel(space) {
+  if (space.type === "property") {
+    return `${space.price} DC / affitto ${space.rent}`;
+  }
+
+  if (space.type === "tax") {
+    return `Paga ${space.amount} DC`;
+  }
+
+  if (space.type === "bonus") {
+    return `Incassa ${space.amount} DC`;
+  }
+
+  if (space.type === "start") {
+    return `Passa e prendi ${space.reward} DC`;
+  }
+
+  if (space.type === "chance") {
+    return "Imprevisto";
+  }
+
+  return "Sosta";
+}
+
+function boardSpaceDescription(space) {
+  const descriptions = {
+    property: `Comprabile per ${space.price} DC. Chi ci capita paga ${space.rent} DC al proprietario.`,
+    tax: `Casella tassa: perdi ${space.amount} DC.`,
+    bonus: `Casella bonus: guadagni ${space.amount} DC.`,
+    start: `Passando dal via prendi ${space.reward} DC.`,
+    chance: "Imprevisto casuale: puo andare bene o malissimo.",
+    rest: "Casella neutra: ti fermi e respiri.",
+  };
+
+  return descriptions[space.type] ?? "Casella speciale.";
 }
 
 function blackjackStatusLabel(status) {

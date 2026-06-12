@@ -39,6 +39,30 @@ const blackjackTable = {
   players: new Map(),
   message: "Entra al tavolo e avvia un round quando siete pronti.",
 };
+const boardGame = {
+  phase: "waiting",
+  round: 0,
+  turnIndex: 0,
+  lastRoll: null,
+  message: "Entra nel Board Royale e avvia la partita quando siete pronti.",
+  players: new Map(),
+  properties: new Map(),
+};
+
+const boardSpaces = [
+  { id: "start", name: "Via del degrado", type: "start", reward: 200 },
+  { id: "bar", name: "Bar sospetto", type: "property", price: 120, rent: 20, color: "#ffc857" },
+  { id: "tax", name: "Multa morale", type: "tax", amount: 90 },
+  { id: "slot", name: "Sala slot", type: "property", price: 180, rent: 32, color: "#ff3864" },
+  { id: "bonus", name: "Colpo di fortuna", type: "bonus", amount: 140 },
+  { id: "kebab", name: "Kebab imperiale", type: "property", price: 160, rent: 28, color: "#85ff9e" },
+  { id: "jail", name: "Pausa vergogna", type: "rest" },
+  { id: "disco", name: "Disco triste", type: "property", price: 220, rent: 42, color: "#3ee8ff" },
+  { id: "chance", name: "Imprevisto", type: "chance" },
+  { id: "hotel", name: "Hotel discutibile", type: "property", price: 260, rent: 55, color: "#9b5de5" },
+  { id: "fine", name: "Cena da pagare", type: "tax", amount: 130 },
+  { id: "arena", name: "Arena del caos", type: "property", price: 300, rent: 70, color: "#ff4fd8" },
+];
 
 app.use(express.static(path.join(__dirname, "dist")));
 
@@ -78,6 +102,7 @@ wss.on("connection", (socket) => {
       send(socket, { type: "chat-history", messages: chatMessages });
       broadcastState();
       sendBlackjackState(socket);
+      send(socket, buildBoardState());
       return;
     }
 
@@ -128,6 +153,36 @@ wss.on("connection", (socket) => {
 
     if (message.type === "blackjack-stand") {
       standBlackjack(clientId);
+      return;
+    }
+
+    if (message.type === "board-join") {
+      joinBoard(clientId);
+      return;
+    }
+
+    if (message.type === "board-leave") {
+      leaveBoard(clientId);
+      return;
+    }
+
+    if (message.type === "board-start") {
+      startBoardGame(clientId);
+      return;
+    }
+
+    if (message.type === "board-roll") {
+      rollBoardDice(clientId);
+      return;
+    }
+
+    if (message.type === "board-buy") {
+      buyBoardProperty(clientId);
+      return;
+    }
+
+    if (message.type === "board-end-turn") {
+      endBoardTurn(clientId);
       return;
     }
 
@@ -191,9 +246,11 @@ function releaseCharacter(clientId) {
   player.characterId = null;
   player.displayName = null;
   blackjackTable.players.delete(clientId);
+  boardGame.players.delete(clientId);
   player.lastSeenAt = Date.now();
   broadcastState();
   broadcastBlackjackState();
+  broadcastBoardState();
 }
 
 function sendChatMessage(clientId, rawText) {
@@ -230,8 +287,10 @@ function pruneDisconnectedPlayer(clientId) {
   if (Date.now() - player.lastSeenAt >= 30000) {
     clients.delete(clientId);
     blackjackTable.players.delete(clientId);
+    boardGame.players.delete(clientId);
     broadcastState();
     broadcastBlackjackState();
+    broadcastBoardState();
   }
 }
 
@@ -483,6 +542,265 @@ function handValue(cards) {
   }
 
   return { total };
+}
+
+function joinBoard(clientId) {
+  const player = clients.get(clientId);
+
+  if (!player?.characterId) {
+    send(player?.socket, { type: "error", message: "Prima scegli un personaggio, poi entra nel Board Royale." });
+    return;
+  }
+
+  const existing = boardGame.players.get(clientId);
+  boardGame.players.set(clientId, {
+    id: clientId,
+    displayName: player.displayName || player.characterId,
+    characterId: player.characterId,
+    position: existing?.position ?? 0,
+    balance: existing?.balance ?? 1500,
+    status: existing?.status ?? "joined",
+    canBuy: false,
+    lastMove: existing?.lastMove ?? null,
+  });
+  boardGame.message = `${player.displayName || "Giocatore"} entra nel Board Royale.`;
+  broadcastBoardState();
+}
+
+function leaveBoard(clientId) {
+  boardGame.players.delete(clientId);
+  if (boardGame.players.size === 0) {
+    resetBoardGame("Board Royale vuoto. Nuova partita quando arrivano i player.");
+  } else if (getBoardCurrentPlayer()?.id === clientId) {
+    normalizeBoardTurn();
+  }
+  broadcastBoardState();
+}
+
+function startBoardGame(clientId) {
+  if (!boardGame.players.has(clientId)) {
+    joinBoard(clientId);
+  }
+
+  const players = Array.from(boardGame.players.values());
+  if (players.length === 0) {
+    return;
+  }
+
+  boardGame.phase = "playing";
+  boardGame.round += 1;
+  boardGame.turnIndex = 0;
+  boardGame.lastRoll = null;
+  boardGame.properties.clear();
+  boardGame.message = `Partita avviata. Tocca a ${players[0].displayName}.`;
+
+  for (const player of players) {
+    player.position = 0;
+    player.balance = 1500;
+    player.status = "waiting";
+    player.canBuy = false;
+    player.lastMove = null;
+  }
+  players[0].status = "turn";
+  broadcastBoardState();
+}
+
+function rollBoardDice(clientId) {
+  if (boardGame.phase !== "playing") {
+    return;
+  }
+
+  const player = getBoardCurrentPlayer();
+  if (!player || player.id !== clientId || player.status !== "turn") {
+    return;
+  }
+
+  const dice = [rollDie(), rollDie()];
+  const steps = dice[0] + dice[1];
+  const previousPosition = player.position;
+  player.position = (player.position + steps) % boardSpaces.length;
+  player.lastMove = steps;
+  player.status = "moved";
+  player.canBuy = false;
+  boardGame.lastRoll = dice;
+
+  if (previousPosition + steps >= boardSpaces.length) {
+    player.balance += boardSpaces[0].reward;
+  }
+
+  resolveBoardSpace(player);
+  broadcastBoardState();
+}
+
+function buyBoardProperty(clientId) {
+  const player = boardGame.players.get(clientId);
+  if (!player || boardGame.phase !== "playing" || !player.canBuy) {
+    return;
+  }
+
+  const space = boardSpaces[player.position];
+  if (space?.type !== "property" || boardGame.properties.has(space.id) || player.balance < space.price) {
+    return;
+  }
+
+  player.balance -= space.price;
+  player.canBuy = false;
+  boardGame.properties.set(space.id, clientId);
+  boardGame.message = `${player.displayName} compra ${space.name} per ${space.price} DC.`;
+  broadcastBoardState();
+}
+
+function endBoardTurn(clientId) {
+  const player = getBoardCurrentPlayer();
+  if (!player || player.id !== clientId || boardGame.phase !== "playing") {
+    return;
+  }
+
+  player.status = "waiting";
+  player.canBuy = false;
+  const players = Array.from(boardGame.players.values()).filter((item) => item.balance > -500);
+  if (players.length === 0) {
+    resetBoardGame("Tutti in bancarotta morale. Board resettato.");
+    broadcastBoardState();
+    return;
+  }
+
+  boardGame.turnIndex = (boardGame.turnIndex + 1) % players.length;
+  players[boardGame.turnIndex].status = "turn";
+  boardGame.message = `Tocca a ${players[boardGame.turnIndex].displayName}.`;
+  broadcastBoardState();
+}
+
+function resolveBoardSpace(player) {
+  const space = boardSpaces[player.position];
+  if (!space) {
+    return;
+  }
+
+  if (space.type === "start") {
+    boardGame.message = `${player.displayName} passa dal via e respira aria di cash finto.`;
+    return;
+  }
+
+  if (space.type === "tax") {
+    player.balance -= space.amount;
+    boardGame.message = `${player.displayName} paga ${space.amount} DC: ${space.name}.`;
+    return;
+  }
+
+  if (space.type === "bonus") {
+    player.balance += space.amount;
+    boardGame.message = `${player.displayName} incassa ${space.amount} DC: ${space.name}.`;
+    return;
+  }
+
+  if (space.type === "chance") {
+    const amount = Math.random() > 0.5 ? 180 : -120;
+    player.balance += amount;
+    boardGame.message =
+      amount > 0
+        ? `${player.displayName} pesca imprevisto buono: +${amount} DC.`
+        : `${player.displayName} pesca imprevisto marcio: ${amount} DC.`;
+    return;
+  }
+
+  if (space.type === "rest") {
+    boardGame.message = `${player.displayName} si ferma in pausa vergogna. Nessun danno, per ora.`;
+    return;
+  }
+
+  if (space.type === "property") {
+    const ownerId = boardGame.properties.get(space.id);
+
+    if (!ownerId) {
+      player.canBuy = player.balance >= space.price;
+      boardGame.message = player.canBuy
+        ? `${player.displayName} puo comprare ${space.name} per ${space.price} DC.`
+        : `${player.displayName} non ha abbastanza DC per ${space.name}.`;
+      return;
+    }
+
+    if (ownerId === player.id) {
+      boardGame.message = `${player.displayName} torna nella sua proprieta: ${space.name}.`;
+      return;
+    }
+
+    const owner = boardGame.players.get(ownerId);
+    player.balance -= space.rent;
+    if (owner) {
+      owner.balance += space.rent;
+      boardGame.message = `${player.displayName} paga ${space.rent} DC di affitto a ${owner.displayName}.`;
+    } else {
+      boardGame.properties.delete(space.id);
+      boardGame.message = `${space.name} torna libero: proprietario sparito.`;
+    }
+  }
+}
+
+function normalizeBoardTurn() {
+  const players = Array.from(boardGame.players.values());
+  if (players.length === 0) {
+    resetBoardGame("Board Royale vuoto. Nuova partita quando arrivano i player.");
+    return;
+  }
+
+  boardGame.turnIndex %= players.length;
+  for (const player of players) {
+    player.status = "waiting";
+    player.canBuy = false;
+  }
+  players[boardGame.turnIndex].status = boardGame.phase === "playing" ? "turn" : "joined";
+}
+
+function resetBoardGame(message) {
+  boardGame.phase = "waiting";
+  boardGame.turnIndex = 0;
+  boardGame.lastRoll = null;
+  boardGame.message = message;
+  boardGame.properties.clear();
+  for (const player of boardGame.players.values()) {
+    player.position = 0;
+    player.balance = 1500;
+    player.status = "joined";
+    player.canBuy = false;
+    player.lastMove = null;
+  }
+}
+
+function getBoardCurrentPlayer() {
+  const players = Array.from(boardGame.players.values());
+  return players[boardGame.turnIndex] ?? null;
+}
+
+function broadcastBoardState() {
+  broadcast(buildBoardState());
+}
+
+function buildBoardState() {
+  const currentPlayer = getBoardCurrentPlayer();
+  return {
+    type: "board-state",
+    board: {
+      phase: boardGame.phase,
+      round: boardGame.round,
+      turnPlayerId: boardGame.phase === "playing" ? currentPlayer?.id ?? null : null,
+      lastRoll: boardGame.lastRoll,
+      message: boardGame.message,
+      spaces: boardSpaces.map((space, index) => ({
+        ...space,
+        index,
+        ownerId: boardGame.properties.get(space.id) ?? null,
+      })),
+      players: Array.from(boardGame.players.values()).map((player) => ({
+        ...player,
+        online: Boolean(clients.get(player.id)?.socket),
+      })),
+    },
+  };
+}
+
+function rollDie() {
+  return Math.floor(Math.random() * 6) + 1;
 }
 
 function send(socket, payload) {
