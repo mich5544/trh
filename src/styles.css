@@ -1499,7 +1499,7 @@ h2 {
   display: grid;
   justify-items: center;
   width: min(300px, 100%);
-  min-height: 430px;
+  min-height: 470px;
   padding: 12px 12px 16px;
   border: 4px solid rgba(255, 255, 255, 0.78);
   background:
@@ -1540,7 +1540,7 @@ h2 {
 .boxer-figure {
   position: relative;
   width: 100%;
-  height: 300px;
+  height: 340px;
   margin-top: 4px;
 }
 
@@ -1595,7 +1595,7 @@ h2 {
   left: 50%;
   top: 130px;
   width: 9px;
-  height: 112px;
+  height: 152px;
   border-radius: 999px;
   background: #f8f4e8;
   transform: translateX(-50%);
@@ -1615,7 +1615,7 @@ h2 {
 
 .figure-arm {
   top: 126px;
-  height: 128px;
+  height: 166px;
 }
 
 .figure-arm.left {
@@ -1627,7 +1627,7 @@ h2 {
 }
 
 .figure-leg {
-  top: 232px;
+  top: 282px;
   height: 92px;
 }
 
@@ -1642,7 +1642,7 @@ h2 {
 .boxer-portrait {
   position: absolute;
   left: 50%;
-  top: 110px;
+  top: 156px;
   z-index: 2;
   width: min(190px, 70%);
   aspect-ratio: 0.92;
@@ -2828,15 +2828,15 @@ h2 {
 
   .boxer-sticker {
     width: min(250px, 94%);
-    min-height: 380px;
+    min-height: 420px;
   }
 
   .boxer-figure {
-    height: 260px;
+    height: 300px;
   }
 
   .boxer-portrait {
-    top: 102px;
+    top: 144px;
     width: min(160px, 70%);
   }
 
@@ -2860,7 +2860,7 @@ h2 {
 
   .figure-body {
     top: 112px;
-    height: 96px;
+    height: 136px;
   }
 
   .figure-body::before {
@@ -2870,11 +2870,11 @@ h2 {
 
   .figure-arm {
     top: 112px;
-    height: 108px;
+    height: 148px;
   }
 
   .figure-leg {
-    top: 205px;
+    top: 250px;
     height: 78px;
   }
 
