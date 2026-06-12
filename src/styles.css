@@ -1098,22 +1098,37 @@ h2 {
   font-size: 1.25rem;
 }
 
-.board-grid {
+.monopoly-board {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: 1.12fr repeat(2, minmax(0, 1fr)) 1.12fr;
+  grid-template-rows: 1.12fr repeat(2, minmax(0, 1fr)) 1.12fr;
+  gap: 8px;
+  aspect-ratio: 1;
+  min-height: 680px;
+  padding: 10px;
+  border: 5px solid rgba(255, 248, 234, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.035) 25%, transparent 25% 50%, rgba(255, 255, 255, 0.035) 50% 75%, transparent 75%) 0 0 / 38px 38px,
+    radial-gradient(circle at 50% 50%, rgba(255, 200, 87, 0.18), transparent 34%),
+    rgba(8, 24, 29, 0.56);
 }
 
 .board-space {
   position: relative;
   display: grid;
   align-content: space-between;
-  min-height: 150px;
-  padding: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 10px;
   overflow: hidden;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--space-color), transparent 76%), transparent 42%),
-    rgba(255, 255, 255, 0.07);
+    rgba(255, 248, 234, 0.92);
+  color: #15151d;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.18),
+    0 8px 18px rgba(0, 0, 0, 0.24);
 }
 
 .board-space::before {
@@ -1126,20 +1141,31 @@ h2 {
 
 .board-space strong {
   margin-top: 12px;
-  font-size: 1rem;
+  font-size: clamp(0.72rem, 1.05vw, 0.95rem);
   line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .board-space small {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.76rem;
+  color: rgba(16, 18, 28, 0.68);
+  font-size: clamp(0.58rem, 0.82vw, 0.72rem);
   line-height: 1.25;
 }
 
 .board-index {
-  color: rgba(255, 255, 255, 0.54);
+  color: rgba(16, 18, 28, 0.5);
   font-size: 0.72rem;
   font-weight: 1000;
+}
+
+.board-corner {
+  background:
+    radial-gradient(circle at 50% 18%, color-mix(in srgb, var(--space-color), white 8%), transparent 36%),
+    rgba(255, 248, 234, 0.96);
+}
+
+.board-corner strong {
+  font-size: clamp(0.9rem, 1.35vw, 1.15rem);
 }
 
 .board-tokens {
@@ -1176,6 +1202,66 @@ h2 {
   text-transform: uppercase;
 }
 
+.board-space:nth-child(1) {
+  grid-column: 4;
+  grid-row: 4;
+}
+
+.board-space:nth-child(2) {
+  grid-column: 3;
+  grid-row: 4;
+}
+
+.board-space:nth-child(3) {
+  grid-column: 2;
+  grid-row: 4;
+}
+
+.board-space:nth-child(4) {
+  grid-column: 1;
+  grid-row: 4;
+}
+
+.board-space:nth-child(5) {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.board-space:nth-child(6) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.board-space:nth-child(7) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.board-space:nth-child(8) {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.board-space:nth-child(9) {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.board-space:nth-child(10) {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.board-space:nth-child(11) {
+  grid-column: 4;
+  grid-row: 2;
+}
+
+.board-space:nth-child(12) {
+  grid-column: 4;
+  grid-row: 3;
+}
+
 .board-tax::before {
   background: var(--hot);
 }
@@ -1190,16 +1276,25 @@ h2 {
 }
 
 .board-center {
+  grid-column: 2 / 4;
+  grid-row: 2 / 4;
   display: grid;
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: clamp(16px, 3vw, 34px);
+  border: 2px solid rgba(255, 200, 87, 0.28);
   border-radius: 8px;
-  background: rgba(0, 0, 0, 0.22);
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 200, 87, 0.18), transparent 36%),
+    linear-gradient(135deg, rgba(255, 56, 100, 0.14), rgba(62, 232, 255, 0.12)),
+    rgba(7, 16, 24, 0.78);
+  text-align: center;
 }
 
 .board-center strong {
-  font-size: 1.1rem;
+  max-width: 640px;
+  font-size: clamp(1.05rem, 2vw, 1.65rem);
   line-height: 1.35;
 }
 
@@ -2294,13 +2389,32 @@ h2 {
     padding: 12px;
   }
 
-  .board-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .monopoly-board {
+    min-height: 0;
+    gap: 5px;
+    padding: 6px;
   }
 
   .board-space {
-    min-height: 132px;
+    min-height: 88px;
+    padding: 7px;
+  }
+
+  .board-space strong {
+    font-size: 0.62rem;
+  }
+
+  .board-space small {
+    font-size: 0.54rem;
+  }
+
+  .board-center {
+    gap: 8px;
     padding: 10px;
+  }
+
+  .board-center strong {
+    font-size: 0.86rem;
   }
 
   .board-controls {

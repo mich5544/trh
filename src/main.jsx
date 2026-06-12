@@ -1075,16 +1075,16 @@ function BoardRoyale({
             <strong>{turnPlayer ? `Turno: ${turnPlayer.displayName}` : "In attesa"}</strong>
           </div>
 
-          <div className="board-grid">
+          <div className="monopoly-board">
             {spaces.map((space, index) => (
               <BoardSpace key={space.id} space={space} index={index} players={displayedPlayers.filter((player) => player.displayPosition === index)} />
             ))}
-          </div>
 
-          <div className="board-center">
-            <p className="eyebrow">Ultimo evento</p>
-            <strong>{board.message}</strong>
-            <DiceTray dice={board.lastRoll} />
+            <div className="board-center">
+              <p className="eyebrow">Board Royale</p>
+              <strong>{board.message}</strong>
+              <DiceTray dice={board.lastRoll} />
+            </div>
           </div>
 
           <div className="board-controls">
@@ -1152,7 +1152,7 @@ function BoardRoyale({
 
 function BoardSpace({ space, index, players }) {
   return (
-    <article className={`board-space board-${space.type}`} style={{ "--space-color": space.color ?? "#ffffff" }}>
+    <article className={`board-space board-${space.type} ${isBoardCorner(index) ? "board-corner" : ""}`} style={{ "--space-color": space.color ?? "#ffffff" }}>
       <span className="board-index">{String(index + 1).padStart(2, "0")}</span>
       <strong>{space.name}</strong>
       <small>{boardSpaceShortLabel(space)}</small>
@@ -1617,6 +1617,10 @@ function boardSpaceDescription(space) {
   };
 
   return descriptions[space.type] ?? "Casella speciale.";
+}
+
+function isBoardCorner(index) {
+  return [0, 3, 6, 9].includes(index);
 }
 
 function animateBoardMove(playerId, fromPosition, toPosition, boardSize, setVisualPositions, setMovingPlayers, timersByPlayer) {
